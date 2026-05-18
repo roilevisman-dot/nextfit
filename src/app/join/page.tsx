@@ -47,8 +47,8 @@ export default function JoinPage() {
   const activeCursor = cursorIdx === -1 ? CODE_LENGTH - 1 : cursorIdx;
 
   const handleInput = (idx: number, val: string) => {
-    const char = val.slice(-1).toUpperCase();
-    if (!char.match(/[A-Z0-9]/)) return;
+    const char = val.slice(-1);
+    if (!char.match(/[0-9]/)) return;
 
     const next = [...digits];
     next[idx] = char;
@@ -183,7 +183,7 @@ export default function JoinPage() {
                       ref={(el) => { inputRefs.current[i] = el; }}
                       className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                       maxLength={1}
-                      inputMode="text"
+                      inputMode="numeric"
                       autoComplete="off"
                       value={d}
                       onChange={(e) => handleInput(i, e.target.value)}
