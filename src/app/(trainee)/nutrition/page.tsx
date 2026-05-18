@@ -2,48 +2,73 @@
 
 import { useState } from "react";
 
+const TOTAL_CAL = 2100;
+const consumed = 1320;
+const remaining = TOTAL_CAL - consumed;
+
+const macros = [
+  { label: "חלבון", value: 86, max: 160, color: "#E11D2A" },
+  { label: "פחמימות", value: 138, max: 240, color: "#F97316" },
+  { label: "שומן", value: 38, max: 70, color: "#EAB308" },
+];
+
 const meals = [
   {
-    label: "ארוחת בוקר",
-    time: "07:00–08:00",
-    calories: 480,
-    emoji: "☀️",
-    items: ["4 ביצים קשות", "2 פרוסות לחם מחיטה מלאה", "1/2 אבוקדו", "קפה שחור"],
-    macros: { protein: 38, carbs: 42, fat: 22 },
+    name: "שיבולת שועל + חלבון",
+    time: "07:30",
+    cal: 420,
+    done: true,
+    img: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=120&q=80",
+    macros: { p: 28, c: 58, f: 12 },
   },
   {
-    label: "ארוחת צהריים",
-    time: "12:30–13:30",
-    calories: 620,
-    emoji: "🍗",
-    items: ["200g חזה עוף", "150g אורז מלא", "ירקות מוקפצים", "כף שמן זית"],
-    macros: { protein: 52, carbs: 65, fat: 14 },
+    name: "תבנית לגן + פירות",
+    time: "10:30",
+    cal: 220,
+    done: true,
+    img: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=120&q=80",
+    macros: { p: 8, c: 42, f: 6 },
   },
   {
-    label: "חטיף אחה״צ",
-    time: "16:00–17:00",
-    calories: 280,
-    emoji: "🥛",
-    items: ["200g גבינה 5%", "1 בננה", "קומץ שקדים (20g)"],
-    macros: { protein: 24, carbs: 32, fat: 8 },
+    name: "חזה עוף + אורז מלא",
+    time: "13:30",
+    cal: 540,
+    done: false,
+    img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=120&q=80",
+    macros: { p: 52, c: 65, f: 14 },
   },
   {
-    label: "ארוחת ערב",
-    time: "19:00–20:00",
-    calories: 540,
-    emoji: "🐟",
-    items: ["180g דג סלמון", "200g בטטה", "סלט ירקות גדול", "כף טחינה"],
-    macros: { protein: 44, carbs: 48, fat: 16 },
+    name: "סלמון + בטטה",
+    time: "19:00",
+    cal: 480,
+    done: false,
+    img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=120&q=80",
+    macros: { p: 44, c: 38, f: 18 },
   },
 ];
 
-const totalCalories = meals.reduce((s, m) => s + m.calories, 0);
-const totalProtein = meals.reduce((s, m) => s + m.macros.protein, 0);
+const WATER_GOAL = 2.5;
+const DROPS = 8;
+
+// Donut chart helpers
+const R = 54;
+const CIRC = 2 * Math.PI * R;
+const pct = consumed / TOTAL_CAL;
+const dash = pct * CIRC;
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
 
 export default function NutritionPage() {
-  const [open, setOpen] = useState<number | null>(0);
-  const [water, setWater] = useState(4);
-  const waterGoal = 8;
+  const [water, setWater] = useState(1.25);
+  const [done, setDone] = useState<boolean[]>(meals.map((m) => m.done));
+
+  const filledDrops = Math.round((water / WATER_GOAL) * DROPS);
 
   return (
     <main className="min-h-screen font-heb pb-10" style={{ background: "#0B0A08", color: "#FAF9F6" }}>
@@ -52,116 +77,174 @@ export default function NutritionPage() {
         {/* Header */}
         <div className="rise">
           <div className="text-[10.5px] tracking-[0.34em] uppercase text-white/45">תזונה</div>
-          <h1 className="mt-1 text-[28px] font-extrabold leading-tight">תפריט שבועי</h1>
+          <h1 className="mt-1 text-[26px] font-extrabold leading-tight">התפריט היום</h1>
         </div>
 
-        {/* Summary */}
+        {/* Donut + Macros */}
         <div
           className="rounded-3xl p-5 rise"
           style={{
-            animationDelay: "60ms",
+            animationDelay: "50ms",
             background: "rgba(255,255,255,0.04)",
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
           }}
         >
-          <p className="text-[10.5px] text-white/45 uppercase tracking-wide mb-3">סיכום יומי</p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "קלוריות", value: totalCalories, unit: "קק״ל", red: true },
-              { label: "חלבון", value: totalProtein, unit: "גרם", red: false },
-              { label: "ארוחות", value: meals.length, unit: "ביום", red: false },
-            ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5">
-                <p className="text-[22px] font-extrabold leading-none" style={{ color: s.red ? "#E11D2A" : "#FAF9F6" }}>{s.value}</p>
-                <p className="text-[10px] text-white/40">{s.unit}</p>
-                <p className="text-[9px] text-white/30">{s.label}</p>
+          <div className="flex items-center gap-5">
+            {/* Donut */}
+            <div className="relative flex-shrink-0">
+              <svg width="130" height="130" viewBox="0 0 130 130">
+                {/* Track */}
+                <circle
+                  cx="65" cy="65" r={R}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.08)"
+                  strokeWidth="12"
+                />
+                {/* Progress */}
+                <circle
+                  cx="65" cy="65" r={R}
+                  fill="none"
+                  stroke="#E11D2A"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={`${dash} ${CIRC}`}
+                  strokeDashoffset={CIRC / 4}
+                  transform="rotate(-90 65 65)"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-[22px] font-extrabold leading-none">{consumed.toLocaleString()}</p>
+                <p className="text-[9px] text-white/45 mt-0.5">מתוך {TOTAL_CAL.toLocaleString()} קק״ל</p>
+                <p className="text-[9px] mt-1" style={{ color: "#E11D2A" }}>{remaining} נותרו</p>
               </div>
-            ))}
+            </div>
+
+            {/* Macro bars */}
+            <div className="flex-1 space-y-3">
+              {macros.map((m, i) => (
+                <div key={i}>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[11px] text-white/50">{m.label}</span>
+                    <span className="text-[11px] font-semibold">{m.value}g</span>
+                  </div>
+                  <div className="h-[5px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ background: m.color, width: `${(m.value / m.max) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Water */}
+        {/* Water tracker */}
         <div
           className="rounded-2xl p-4 rise"
           style={{
-            animationDelay: "100ms",
+            animationDelay: "90ms",
             background: "rgba(255,255,255,0.04)",
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
           }}
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[13px] font-medium">💧 מעקב שתייה</span>
-            <span className="text-[11px] text-white/40">{water}/{waterGoal} כוסות</span>
+            <span className="text-[13px] font-semibold">מעקב שתייה</span>
+            <span className="text-[11px] text-white/40">{water.toFixed(2)}L / {WATER_GOAL}L</span>
           </div>
+
+          {/* + / - controls */}
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              className="tap w-9 h-9 rounded-full grid place-items-center font-bold text-[18px]"
+              style={{ background: "rgba(255,255,255,0.07)" }}
+              onClick={() => setWater((w) => Math.max(0, parseFloat((w - 0.25).toFixed(2))))}
+            >
+              −
+            </button>
+            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ background: "#3B82F6", width: `${(water / WATER_GOAL) * 100}%` }}
+              />
+            </div>
+            <button
+              className="tap w-9 h-9 rounded-full grid place-items-center font-bold text-[18px]"
+              style={{ background: "#3B82F6" }}
+              onClick={() => setWater((w) => Math.min(WATER_GOAL, parseFloat((w + 0.25).toFixed(2))))}
+            >
+              +
+            </button>
+          </div>
+
+          {/* Drop indicators */}
           <div className="flex gap-1.5">
-            {Array.from({ length: waterGoal }).map((_, i) => (
-              <button
+            {Array.from({ length: DROPS }).map((_, i) => (
+              <div
                 key={i}
-                onClick={() => setWater(i < water ? i : i + 1)}
-                className="tap flex-1 h-6 rounded-lg transition-all"
-                style={{ background: i < water ? "#3B82F6" : "rgba(255,255,255,0.07)" }}
+                className="flex-1 h-5 rounded-md transition-all"
+                style={{ background: i < filledDrops ? "#3B82F6" : "rgba(255,255,255,0.07)" }}
               />
             ))}
           </div>
         </div>
 
         {/* Meals */}
-        <div className="space-y-2.5 rise" style={{ animationDelay: "140ms" }}>
-          {meals.map((meal, mi) => (
-            <div
-              key={mi}
-              className="rounded-2xl overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
-            >
-              <button
-                className="tap w-full flex items-center justify-between p-4"
-                onClick={() => setOpen(open === mi ? null : mi)}
+        <div className="rise" style={{ animationDelay: "130ms" }}>
+          <p className="text-[12.5px] font-semibold text-white/60 mb-2.5">ארוחות היום</p>
+          <div className="space-y-2.5">
+            {meals.map((meal, i) => (
+              <div
+                key={i}
+                className="rounded-2xl overflow-hidden flex items-center gap-0"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
+                  opacity: done[i] ? 1 : 0.75,
+                }}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl grid place-items-center text-[20px]"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
-                  >
-                    {meal.emoji}
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-[13.5px]">{meal.label}</p>
-                    <p className="text-[11px] text-white/40">{meal.time} · {meal.calories} קק״ל</p>
-                  </div>
-                </div>
-                <span className="text-white/30 text-[18px] leading-none">{open === mi ? "−" : "+"}</span>
-              </button>
+                {/* Food image */}
+                <img
+                  src={meal.img}
+                  alt={meal.name}
+                  className="w-[72px] h-[72px] object-cover flex-shrink-0"
+                />
 
-              {open === mi && (
-                <div className="px-4 pb-4">
-                  <div className="h-px mb-3" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  <div className="space-y-1.5 mb-4">
-                    {meal.items.map((item, ii) => (
-                      <div key={ii} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#E11D2A" }} />
-                        <p className="text-[13px] text-white/75">{item}</p>
-                      </div>
-                    ))}
+                {/* Content */}
+                <div className="flex-1 px-3 py-2.5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-[13px] font-semibold leading-tight">{meal.name}</p>
+                      <p className="text-[10.5px] text-white/40 mt-0.5">{meal.time} · {meal.cal} קק״ל</p>
+                    </div>
+                    <button
+                      className="tap w-7 h-7 rounded-full grid place-items-center flex-shrink-0 ml-1"
+                      style={{
+                        background: done[i] ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.07)",
+                        boxShadow: done[i] ? "inset 0 0 0 1px rgba(16,185,129,0.35)" : "inset 0 0 0 1px rgba(255,255,255,0.10)",
+                      }}
+                      onClick={() => setDone((d) => d.map((v, j) => j === i ? !v : v))}
+                    >
+                      <CheckIcon className="w-3.5 h-3.5" style={{ color: done[i] ? "#10B981" : "rgba(255,255,255,0.3)" }} />
+                    </button>
                   </div>
-                  <div
-                    className="grid grid-cols-3 rounded-xl p-3"
-                    style={{ background: "rgba(255,255,255,0.05)" }}
-                  >
+
+                  {/* Mini macros */}
+                  <div className="flex gap-2.5 mt-1.5">
                     {[
-                      { label: "חלבון", value: meal.macros.protein },
-                      { label: "פחמימות", value: meal.macros.carbs },
-                      { label: "שומן", value: meal.macros.fat },
-                    ].map((m, i) => (
-                      <div key={i} className="text-center">
-                        <p className="text-[14px] font-bold">{m.value}g</p>
-                        <p className="text-[10px] text-white/40">{m.label}</p>
-                      </div>
+                      { l: "P", v: meal.macros.p, c: "#E11D2A" },
+                      { l: "C", v: meal.macros.c, c: "#F97316" },
+                      { l: "F", v: meal.macros.f, c: "#EAB308" },
+                    ].map((m, j) => (
+                      <span key={j} className="text-[9.5px]" style={{ color: m.c }}>
+                        {m.l}: {m.v}g
+                      </span>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </main>
