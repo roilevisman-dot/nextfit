@@ -1,94 +1,138 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Users, TrendingUp, Dumbbell, ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { NFMark } from "@/components/NFMark";
 
 const clients = [
-  { name: "יואב כהן", lastWorkout: "אתמול", weight: 82.5, goal: 78, plan: "Push/Pull/Legs" },
-  { name: "מיכל ברק", lastWorkout: "לפני 2 ימים", weight: 65.2, goal: 60, plan: "Full Body" },
-  { name: "דניאל שמש", lastWorkout: "לפני 3 ימים", weight: 91.0, goal: 85, plan: "Push/Pull/Legs" },
+  { name: "יואב כהן", lastWorkout: "אתמול", weight: 82.5, goal: 78, plan: "Push/Pull/Legs", adherence: 88 },
+  { name: "מיכל ברק", lastWorkout: "לפני 2 ימים", weight: 65.2, goal: 60, plan: "Full Body", adherence: 72 },
+  { name: "דניאל שמש", lastWorkout: "לפני 3 ימים", weight: 91.0, goal: 85, plan: "Push/Pull/Legs", adherence: 95 },
 ];
+
+function BellIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  );
+}
+
+function PlusIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  );
+}
+
+function ChevRightIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m9 6 6 6-6 6"/>
+    </svg>
+  );
+}
 
 export default function DashboardPage() {
   return (
-    <div className="px-5 pt-8 flex flex-col gap-6">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <h1 className="text-2xl font-bold text-foreground">לוח בקרה</h1>
-        <p className="text-muted-foreground text-sm mt-1">שלום, ראובן 👋</p>
-      </motion.div>
+    <main className="min-h-screen font-heb" style={{ background: "#0B0A08", color: "#FAF9F6" }}>
+      {/* Top bar */}
+      <div className="px-5 pt-[58px] pb-4 flex items-center justify-between">
+        <NFMark size={28} />
+        <button
+          className="tap w-9 h-9 grid place-items-center rounded-full"
+          style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
+        >
+          <BellIcon className="w-[18px] h-[18px] text-white/70" />
+        </button>
+      </div>
 
-      {/* Stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.05 }}
-        className="grid grid-cols-3 gap-3"
-      >
-        {[
-          { label: "מתאמנים", value: "3", icon: Users, color: "#c8ff00" },
-          { label: "אימונים השבוע", value: "7", icon: Dumbbell, color: "#60a5fa" },
-          { label: "ממוצע ציות", value: "84%", icon: TrendingUp, color: "#4ade80" },
-        ].map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <div key={i} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
-              <Icon className="w-4 h-4" style={{ color: stat.color }} />
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-            </div>
-          );
-        })}
-      </motion.div>
-
-      {/* Clients */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-foreground">מתאמנים פעילים</p>
-          <Link href="/clients" className="text-xs flex items-center gap-0.5" style={{ color: "#c8ff00" }}>
-            כולם <ChevronLeft className="w-3 h-3" />
-          </Link>
+      <div className="px-5 space-y-6 pb-10">
+        {/* Greeting */}
+        <div className="rise">
+          <div className="text-[11px] tracking-[0.32em] uppercase text-white/55">לוח בקרה</div>
+          <h1 className="mt-1.5 text-[30px] leading-[1.1] tracking-tight">
+            שלום, <span className="font-extrabold">מאמן</span>
+            <span style={{ color: "#E11D2A" }}>.</span>
+          </h1>
         </div>
-        <div className="flex flex-col gap-3">
-          {clients.map((client, i) => {
-            const progress = Math.round(((client.weight - client.goal) / (client.weight - client.goal + 1)) * 100);
-            return (
-              <motion.div
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2.5 rise" style={{ animationDelay: "60ms" }}>
+          {[
+            { label: "מתאמנים", value: "3" },
+            { label: "אימונים השבוע", value: "7" },
+            { label: "ממוצע ציות", value: "84%" },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className="rounded-2xl p-4 flex flex-col gap-1"
+              style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
+            >
+              <p className="text-[22px] font-extrabold" style={{ color: i === 2 ? "#E11D2A" : "#FAF9F6" }}>{stat.value}</p>
+              <p className="text-[10px] text-white/50">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Clients */}
+        <div className="rise" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[13px] font-semibold">מתאמנים פעילים</p>
+            <button className="text-[11.5px] text-white/50 flex items-center gap-0.5">
+              כולם <ChevRightIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {clients.map((client, i) => (
+              <button
                 key={i}
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.15 + i * 0.07 }}
-                className="bg-card border border-border rounded-2xl p-4"
+                className="tap w-full text-right rounded-2xl p-4"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
+                  animationDelay: `${160 + i * 60}ms`,
+                }}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-foreground text-sm">{client.name}</p>
-                    <p className="text-xs text-muted-foreground">אחרון: {client.lastWorkout}</p>
+                    <p className="font-semibold text-[14px]">{client.name}</p>
+                    <p className="text-[11px] text-white/45 mt-0.5">אחרון: {client.lastWorkout}</p>
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-bold text-foreground">{client.weight} ק״ג</p>
-                    <p className="text-xs text-muted-foreground">יעד: {client.goal}</p>
+                    <p className="text-[15px] font-bold">{client.weight} <span className="text-[11px] font-normal text-white/50">ק״ג</span></p>
+                    <p className="text-[10px] text-white/40">יעד: {client.goal}</p>
                   </div>
                 </div>
+                {/* Adherence bar */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1 bg-secondary rounded-full">
-                    <div className="h-full rounded-full" style={{ background: "#c8ff00", width: "45%" }} />
+                  <div className="flex-1 h-[3px] rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ background: "#E11D2A", width: `${client.adherence}%` }}
+                    />
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{client.plan}</span>
+                  <span className="text-[10px] text-white/40">{client.adherence}%</span>
                 </div>
-              </motion.div>
-            );
-          })}
+              </button>
+            ))}
+          </div>
         </div>
-      </motion.div>
-    </div>
+
+        {/* Add client */}
+        <button
+          className="tap w-full h-12 rounded-full flex items-center justify-center gap-2 text-[13.5px] font-medium text-white/70 rise"
+          style={{
+            animationDelay: "400ms",
+            background: "rgba(255,255,255,0.04)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)",
+          }}
+        >
+          <PlusIcon className="w-4 h-4" />
+          הוסף מתאמן
+        </button>
+      </div>
+    </main>
   );
 }

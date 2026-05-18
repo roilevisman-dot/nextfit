@@ -162,8 +162,7 @@ export default function TrainerLoginPage() {
         setLoading(false);
         return;
       }
-      setMessage("נשלח לך מייל אישור — בדוק את תיבת הדואר");
-      setLoading(false);
+      router.push("/dashboard");
     }
   };
 
