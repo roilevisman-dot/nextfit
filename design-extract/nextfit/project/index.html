@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NextFit · /home redesign</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        canvas:  '#F4F3EF',
+        paper:   '#FAF9F6',
+        surface: '#FFFFFF',
+        ink: {
+          950: '#0A0A0C',
+          900: '#121216',
+          800: '#1C1C22',
+          700: '#2A2A31',
+          600: '#52525B',
+          500: '#71717A',
+          400: '#9A9AA3',
+          300: '#C5C5CC',
+        },
+        line:   '#ECEAE2',
+        hair:   '#E4E1D7',
+        iris:   { DEFAULT: '#4F46E5', strong: '#3B30D6', soft: '#EEEDFB' },
+        ember:  '#E8542A',
+        moss:   '#1F7A55',
+      },
+      fontFamily: {
+        sans:    ['Assistant','ui-sans-serif','system-ui','sans-serif'],
+        heb:     ['Assistant','ui-sans-serif','system-ui','sans-serif'],
+        display: ['"Instrument Serif"','Georgia','serif'],
+        mono:    ['"Geist Mono"','ui-monospace','monospace'],
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgba(10,10,12,0.04), 0 6px 18px rgba(10,10,12,0.05)',
+        lift: '0 1px 2px rgba(10,10,12,0.06), 0 18px 40px rgba(10,10,12,0.10)',
+      },
+      borderRadius: { '4xl': '28px', '5xl': '32px' },
+    }
+  }
+};
+</script>
+
+<style>
+  html, body { background: #EFEDE6; }
+  body { font-family: 'Assistant',ui-sans-serif,system-ui,sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* Entrance animations */
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes barFill { from { transform: scaleX(0); } to { transform: scaleX(var(--p, 1)); } }
+  @keyframes ringDraw { from { stroke-dashoffset: var(--from, 0); } to { stroke-dashoffset: var(--to, 0); } }
+  .rise { animation: rise 700ms cubic-bezier(.22,1,.36,1) both; }
+  .fade { animation: fadein 600ms ease both; }
+  .barfill { transform-origin: right center; animation: barFill 1100ms cubic-bezier(.22,1,.36,1) 250ms both; }
+
+  /* Native-feeling tap */
+  .tap { transition: transform 180ms cubic-bezier(.2,.8,.2,1), background-color 180ms ease, box-shadow 180ms ease; }
+  .tap:active { transform: scale(0.985); }
+
+  /* Hide scrollbar inside phone */
+  .nf-scroll::-webkit-scrollbar { display: none; }
+  .nf-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Number — tabular */
+  .nums { font-feature-settings: 'tnum' 1, 'cv11' 1; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="src/system-tokens.jsx"></script>
+<script type="text/babel" src="src/screen-splash.jsx"></script>
+<script type="text/babel" src="src/screen-auth.jsx"></script>
+<script type="text/babel" src="src/home-screen.jsx"></script>
+<script type="text/babel" src="src/home-screen-dark.jsx"></script>
+<script type="text/babel" src="src/screen-workout.jsx"></script>
+<script type="text/babel" src="src/screen-nutrition.jsx"></script>
+<script type="text/babel" src="src/screen-progress.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+
+</body>
+</html>
