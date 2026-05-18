@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Dumbbell, Utensils } from "lucide-react";
+import { NFMark } from "@/components/NFMark";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "לוח בקרה" },
@@ -15,18 +16,28 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 bg-card border-b border-border safe-top">
-      <div className="flex items-center justify-between px-5 h-14">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "#c8ff00" }}>
-            <Dumbbell className="w-4 h-4" style={{ color: "#0a0a0a" }} />
-          </div>
-          <span className="font-bold text-foreground">Nextfit</span>
-          <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">מאמן</span>
-        </div>
+    <header
+      className="sticky top-0 z-50"
+      style={{
+        background: "rgba(11,10,8,0.92)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {/* Brand row */}
+      <div className="flex items-center justify-between px-5 h-12">
+        <NFMark size={24} />
+        <span
+          className="text-[10px] tracking-widest uppercase font-medium"
+          style={{ color: "rgba(255,255,255,0.35)" }}
+        >
+          מאמן
+        </span>
       </div>
-      <nav className="flex border-t border-border">
+
+      {/* Nav tabs */}
+      <nav className="flex" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -34,21 +45,24 @@ export default function TopNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex-1 flex flex-col items-center gap-0.5 py-2.5 relative"
+              className="flex-1 flex flex-col items-center gap-1 py-2.5 relative transition-opacity"
+              style={{ opacity: isActive ? 1 : 0.4 }}
             >
               <Icon
-                className="w-4 h-4 transition-colors"
-                style={{ color: isActive ? "#c8ff00" : "#737373" }}
+                className="w-[17px] h-[17px]"
+                style={{ color: isActive ? "#E11D2A" : "#FAF9F6" }}
               />
               <span
-                className="text-[10px] font-medium transition-colors"
-                style={{ color: isActive ? "#c8ff00" : "#737373" }}
+                className="text-[9.5px] font-medium"
+                style={{ color: isActive ? "#E11D2A" : "#FAF9F6" }}
               >
                 {item.label}
               </span>
               {isActive && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                  style={{ background: "#c8ff00" }} />
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full"
+                  style={{ background: "#E11D2A" }}
+                />
               )}
             </Link>
           );
