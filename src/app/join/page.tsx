@@ -32,7 +32,7 @@ function HelpIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const CODE_LENGTH = 6;
+const CODE_LENGTH = 5;
 
 export default function JoinPage() {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
