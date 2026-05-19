@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,7 +57,6 @@ function newEx(name: string): PlanExercise {
   return { exercise_id: "", name, sets: 3, reps: 12, rest_seconds: 60, weight_kg: 0, youtube_url: "", notes: "", order_index: 0 };
 }
 
-/* ── Icons ── */
 function BackIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M15 19l-7-7 7-7" /></svg>;
 }
@@ -83,32 +82,102 @@ export default function ClientWorkoutPage() {
   const [numDays, setNumDays] = useState(3);
   const [activeDay, setActiveDay] = useState(0);
   const [days, setDays] = useState<WorkoutDay[]>([]);
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
   const [groupFilter, setGroupFilter] = useState("הכל");
   const [freeText, setFreeText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const numDaysChangedByUser = useRef(false);
 
   const supabase = createClient();
 
+  // Load existing data on mount
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.from("clients").select("name").eq("id", clientId).single();
-      if (data) setClientName(data.name);
+      const { data: clientData } = await supabase.from("clients").select("name").eq("id", clientId).single();
+      if (clientData) setClientName(clientData.name);
+
+      const { data: cp } = await supabase
+        .from("client_plans")
+        .select("plan_id")
+        .eq("client_id", clientId)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (cp?.plan_id) {
+        setPlanId(cp.plan_id);
+
+        const { data: planData } = await supabase
+          .from("workout_plans")
+          .select("days_per_week")
+          .eq("id", cp.plan_id)
+          .single();
+
+        if (planData) {
+          const n = planData.days_per_week;
+          setNumDays(n);
+
+          const { data: wdays } = await supabase
+            .from("workout_days")
+            .select("id, day_number, label")
+            .eq("plan_id", cp.plan_id)
+            .order("day_number");
+
+          const loadedDays: WorkoutDay[] = await Promise.all(
+            Array.from({ length: n }, async (_, i) => {
+              const dayRow = wdays?.find((d) => d.day_number === i + 1);
+              if (!dayRow) return { day_number: i + 1, label: DAY_LABELS[i], exercises: [] };
+              const { data: exs } = await supabase
+                .from("plan_exercises")
+                .select("exercise_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
+                .eq("day_id", dayRow.id)
+                .order("order_index");
+              return {
+                day_number: dayRow.day_number,
+                label: dayRow.label,
+                exercises: (exs ?? []).map((e) => ({
+                  exercise_id: e.exercise_id ?? "",
+                  name: e.name ?? "",
+                  sets: e.sets ?? 3,
+                  reps: e.reps ?? 12,
+                  rest_seconds: e.rest_seconds ?? 60,
+                  weight_kg: e.weight_kg ?? 0,
+                  youtube_url: e.youtube_url ?? "",
+                  notes: e.notes ?? "",
+                  order_index: e.order_index ?? 0,
+                })),
+              };
+            })
+          );
+          setDays(loadedDays);
+        }
+      } else {
+        // No existing plan — initialize empty days
+        setDays(Array.from({ length: 3 }, (_, i) => ({ day_number: i + 1, label: DAY_LABELS[i], exercises: [] })));
+      }
+
+      setLoading(false);
     };
     init();
-  }, [supabase, clientId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
 
+  // Resize days array when user manually changes numDays
   useEffect(() => {
+    if (loading) return;
+    if (!numDaysChangedByUser.current) { numDaysChangedByUser.current = true; return; }
     setDays((prev) =>
       Array.from({ length: numDays }, (_, i) => prev[i] ?? { day_number: i + 1, label: DAY_LABELS[i], exercises: [] })
     );
     if (activeDay >= numDays) setActiveDay(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numDays]);
 
   const currentDay = days[activeDay];
 
-  /* ── helpers ── */
   const addExercise = (name: string) => {
     setDays((prev) => prev.map((d, i) => i === activeDay ? { ...d, exercises: [...d.exercises, newEx(name)] } : d));
     setShowPicker(false);
@@ -128,29 +197,42 @@ export default function ClientWorkoutPage() {
     updateField(ei, field, Math.max(min, parseFloat((cur + dir * step).toFixed(1))));
   };
 
-  /* ── save ── */
   const saveAll = async () => {
     setSaving(true);
+    setSaveError(false);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) throw new Error("לא מחובר");
 
-      const { data: plan } = await supabase
-        .from("workout_plans")
-        .upsert({ coach_id: user.id, name: `תוכנית ${clientName}`, days_per_week: numDays })
-        .select().single();
-      if (!plan) throw new Error();
+      let currentPlanId = planId;
 
-      await supabase.from("workout_days").delete().eq("plan_id", plan.id);
+      if (currentPlanId) {
+        // Update existing plan — delete all days (cascade deletes exercises) then re-insert
+        await supabase.from("workout_plans").update({ days_per_week: numDays }).eq("id", currentPlanId);
+        await supabase.from("workout_days").delete().eq("plan_id", currentPlanId);
+      } else {
+        // Create new plan
+        const { data: newPlan, error: planErr } = await supabase
+          .from("workout_plans")
+          .insert({ coach_id: user.id, name: `תוכנית ${clientName}`, days_per_week: numDays })
+          .select()
+          .single();
+        if (planErr || !newPlan) throw new Error(planErr?.message ?? "שגיאה ביצירת תוכנית");
+        currentPlanId = newPlan.id;
+        setPlanId(currentPlanId);
+        await supabase.from("client_plans").insert({ client_id: clientId, plan_id: currentPlanId, active: true });
+      }
 
+      // Insert days + exercises
       for (const day of days) {
         if (day.exercises.length === 0) continue;
-        const { data: dayRow } = await supabase
+        const { data: dayRow, error: dayErr } = await supabase
           .from("workout_days")
-          .insert({ plan_id: plan.id, day_number: day.day_number, label: day.label })
-          .select().single();
-        if (!dayRow) continue;
-        await supabase.from("plan_exercises").insert(
+          .insert({ plan_id: currentPlanId, day_number: day.day_number, label: day.label })
+          .select()
+          .single();
+        if (dayErr || !dayRow) throw new Error(dayErr?.message ?? "שגיאה ביצירת יום");
+        const { error: exErr } = await supabase.from("plan_exercises").insert(
           day.exercises.map((e, idx) => ({
             day_id: dayRow.id,
             exercise_id: null,
@@ -164,31 +246,46 @@ export default function ClientWorkoutPage() {
             order_index: idx,
           }))
         );
+        if (exErr) throw new Error(exErr.message);
       }
 
-      await supabase.from("client_plans").upsert({ client_id: clientId, plan_id: plan.id, active: true });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("Save error:", err);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 4000);
+    }
     setSaving(false);
   };
 
   const library = groupFilter === "הכל" ? EXERCISE_LIBRARY : EXERCISE_LIBRARY.filter((e) => e.group === groupFilter);
 
-  /* ── render ── */
+  if (loading) {
+    return (
+      <main className="min-h-screen font-heb pb-32" style={{ background: "#0B0A08", color: "#FAF9F6" }}>
+        <div className="px-5 pt-6 space-y-4">
+          <div className="h-5 w-24 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="h-8 w-40 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="h-20 rounded-2xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+          <div className="h-32 rounded-2xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen font-heb pb-32" style={{ background: "#0B0A08", color: "#FAF9F6" }}>
       <div className="px-5 pt-6 space-y-5">
 
-        {/* Back */}
         <button onClick={() => router.back()} className="tap flex items-center gap-1.5 text-[13px]" style={{ color: "rgba(255,255,255,0.45)" }}>
           <BackIcon className="w-4 h-4" />{clientName}
         </button>
 
-        {/* Header */}
         <div>
           <div className="text-[10.5px] tracking-[0.34em] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>תוכנית אימון</div>
           <h1 className="mt-1 text-[24px] font-extrabold">{clientName}</h1>
+          {planId && <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>תוכנית קיימת — עריכה תדרוס</p>}
         </div>
 
         {/* Days selector */}
@@ -228,7 +325,6 @@ export default function ClientWorkoutPage() {
             ) : currentDay.exercises.map((ex, ei) => (
               <div key={ei} className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
 
-                {/* Title row */}
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold text-[15px]">{ex.name}</p>
                   <button onClick={() => removeExercise(ei)} className="tap w-7 h-7 rounded-lg grid place-items-center" style={{ background: "rgba(225,29,42,0.10)" }}>
@@ -236,7 +332,6 @@ export default function ClientWorkoutPage() {
                   </button>
                 </div>
 
-                {/* 2×2 spinners */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   {([
                     { label: "משקל (ק״ג)", field: "weight_kg" as const, accent: true },
@@ -256,7 +351,6 @@ export default function ClientWorkoutPage() {
                   ))}
                 </div>
 
-                {/* YouTube URL */}
                 <div className="flex items-center gap-2 rounded-xl px-3 h-10 mb-2" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
                   <YTIcon className="w-4 h-4 flex-shrink-0" style={{ color: ex.youtube_url ? "#FF0000" : "rgba(255,255,255,0.20)" }} />
                   <input
@@ -270,7 +364,6 @@ export default function ClientWorkoutPage() {
                   />
                 </div>
 
-                {/* Notes */}
                 <textarea
                   value={ex.notes}
                   onChange={(e) => updateField(ei, "notes", e.target.value)}
@@ -282,7 +375,6 @@ export default function ClientWorkoutPage() {
               </div>
             ))}
 
-            {/* Add exercise button */}
             <button onClick={() => setShowPicker(true)}
               className="tap w-full rounded-2xl p-4 flex items-center justify-center gap-2.5"
               style={{ background: "rgba(255,255,255,0.02)", boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.08)" }}>
@@ -297,9 +389,12 @@ export default function ClientWorkoutPage() {
 
       {/* Save button */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-4" style={{ background: "linear-gradient(to top, #0B0A08 70%, transparent)" }}>
+        {saveError && (
+          <p className="text-center text-[12px] mb-2" style={{ color: "#F97316" }}>שגיאה בשמירה — בדוק חיבור ונסה שוב</p>
+        )}
         <button onClick={saveAll} disabled={saving}
           className="tap w-full h-13 rounded-full font-bold text-[15px] text-white flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: "#E11D2A", boxShadow: "0 10px 28px rgba(225,29,42,0.40)" }}>
+          style={{ background: saveError ? "#F97316" : "#E11D2A", boxShadow: `0 10px 28px rgba(225,29,42,0.40)` }}>
           {saved ? <><CheckIcon className="w-5 h-5" />נשמר!</> : saving ? "שומר..." : "שמור תוכנית"}
         </button>
       </div>
@@ -313,7 +408,6 @@ export default function ClientWorkoutPage() {
               <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
               <h3 className="text-[17px] font-bold mb-3">הוסף תרגיל</h3>
 
-              {/* Free text input */}
               <div className="flex gap-2 mb-3">
                 <input
                   value={freeText}
@@ -332,7 +426,6 @@ export default function ClientWorkoutPage() {
                 </button>
               </div>
 
-              {/* Group filter */}
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 {GROUPS.map((g) => (
                   <button key={g} onClick={() => setGroupFilter(g)}
@@ -344,7 +437,6 @@ export default function ClientWorkoutPage() {
               </div>
             </div>
 
-            {/* Library list */}
             <div className="overflow-y-auto px-5 space-y-2">
               {library.map((ex) => {
                 const already = currentDay?.exercises.some((e) => e.name === ex.name);
