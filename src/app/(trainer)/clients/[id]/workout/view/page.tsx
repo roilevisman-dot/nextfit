@@ -15,9 +15,17 @@ type Exercise = {
 };
 
 type Day = {
+  id: string;
   day_number: number;
   label: string;
   exercises: Exercise[];
+};
+
+type Session = {
+  id: string;
+  day_id: string;
+  session_date: string;
+  completed_at: string | null;
 };
 
 function BackIcon(p: React.SVGProps<SVGSVGElement>) {
@@ -41,6 +49,7 @@ export default function WorkoutViewPage() {
   const [days, setDays] = useState<Day[]>([]);
   const [activeDay, setActiveDay] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   const supabase = createClient();
 
@@ -82,6 +91,7 @@ export default function WorkoutViewPage() {
             .eq("day_id", day.id)
             .order("order_index");
           return {
+            id: day.id,
             day_number: day.day_number,
             label: day.label,
             exercises: exs ?? [],
@@ -90,6 +100,23 @@ export default function WorkoutViewPage() {
       );
 
       setDays(loadedDays);
+
+      // Load last 14 days of sessions
+      const dayIds = (wdays ?? []).map((d) => d.id);
+      if (dayIds.length > 0) {
+        const since = new Date();
+        since.setDate(since.getDate() - 14);
+        const { data: sess } = await supabase
+          .from("workout_sessions")
+          .select("id, day_id, session_date, completed_at")
+          .eq("client_id", clientId)
+          .eq("completed", true)
+          .in("day_id", dayIds)
+          .gte("session_date", since.toISOString().split("T")[0])
+          .order("session_date", { ascending: false });
+        setSessions(sess ?? []);
+      }
+
       setLoading(false);
     };
     init();
@@ -199,6 +226,33 @@ export default function WorkoutViewPage() {
         {days.length === 0 && !loading && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-[14px]" style={{ color: "rgba(255,255,255,0.40)" }}>אין תוכנית אימון</p>
+          </div>
+        )}
+
+        {/* Session history */}
+        {sessions.length > 0 && (
+          <div className="rise mt-2" style={{ animationDelay: "80ms" }}>
+            <p className="text-[12px] font-semibold mb-2.5" style={{ color: "rgba(255,255,255,0.45)" }}>פעילות 14 ימים אחרונים</p>
+            <div className="space-y-2">
+              {sessions.map((s) => {
+                const dayLabel = days.find((d) => d.id === s.day_id)?.label ?? "אימון";
+                const date = new Date(s.session_date);
+                const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}`;
+                return (
+                  <div key={s.id} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5"
+                    style={{ background: "rgba(16,185,129,0.07)", boxShadow: "inset 0 0 0 1px rgba(16,185,129,0.18)" }}>
+                    <div className="w-6 h-6 rounded-full grid place-items-center flex-shrink-0"
+                      style={{ background: "rgba(16,185,129,0.15)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[12.5px] font-semibold">{dayLabel}</p>
+                    </div>
+                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>{dateStr}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

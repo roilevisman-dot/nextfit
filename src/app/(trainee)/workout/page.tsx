@@ -60,27 +60,33 @@ function TimerIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+const TODAY = new Date().toISOString().split("T")[0];
+
 export default function WorkoutPage() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
+  const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
+  const [markingDone, setMarkingDone] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
 
   const supabase = createClient();
 
   const fetchPlan = useCallback(async () => {
-    const clientId = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!clientId) { setLoading(false); return; }
+    const cid = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
+    if (!cid) { setLoading(false); return; }
+    setClientId(cid);
 
-    // Get assigned plan
-    const { data: cp } = await supabase
+    const { data: cpRows } = await supabase
       .from("client_plans")
       .select("plan_id")
-      .eq("client_id", clientId)
+      .eq("client_id", cid)
       .eq("active", true)
-      .single();
+      .order("id", { ascending: false })
+      .limit(1);
+    const cp = cpRows?.[0] ?? null;
     if (!cp) { setLoading(false); return; }
 
-    // Get plan details + days + exercises
     const { data: planData } = await supabase
       .from("workout_plans")
       .select("name, days_per_week")
@@ -106,11 +112,36 @@ export default function WorkoutPage() {
       })
     );
 
+    // Load today's completed sessions
+    const dayIds = daysData.map((d) => d.id);
+    const { data: sessions } = await supabase
+      .from("workout_sessions")
+      .select("day_id")
+      .eq("client_id", cid)
+      .eq("session_date", TODAY)
+      .eq("completed", true)
+      .in("day_id", dayIds);
+    setCompletedDays(new Set(sessions?.map((s) => s.day_id) ?? []));
+
     setPlan({ ...planData, days: daysWithExercises });
     setLoading(false);
   }, [supabase]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
+
+  const markDone = async () => {
+    if (!currentDay || !clientId || completedDays.has(currentDay.id)) return;
+    setMarkingDone(true);
+    await supabase.from("workout_sessions").insert({
+      client_id: clientId,
+      day_id: currentDay.id,
+      session_date: TODAY,
+      completed: true,
+      completed_at: new Date().toISOString(),
+    });
+    setCompletedDays((prev) => new Set([...prev, currentDay.id]));
+    setMarkingDone(false);
+  };
 
   const currentDay = plan?.days[activeDay];
 
@@ -219,13 +250,23 @@ export default function WorkoutPage() {
                     ~{currentDay.exercises.reduce((acc, e) => acc + e.sets * 3 + e.rest_seconds * (e.sets - 1) / 60, 0).toFixed(0)} דקות משוערות
                   </p>
                 </div>
-                <button
-                  className="tap flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-semibold text-white"
-                  style={{ background: "#E11D2A", boxShadow: "0 8px 24px rgba(225,29,42,0.45)" }}
-                >
-                  <PlayIcon className="w-3 h-3" />
-                  התחל
-                </button>
+                {completedDays.has(currentDay.id) ? (
+                  <div className="flex items-center gap-2 px-4 h-10 rounded-full"
+                    style={{ background: "rgba(16,185,129,0.15)", boxShadow: "inset 0 0 0 1px rgba(16,185,129,0.30)" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 13l4 4L19 7"/></svg>
+                    <span className="text-[13px] font-semibold" style={{ color: "#10B981" }}>הושלם!</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={markDone}
+                    disabled={markingDone}
+                    className="tap flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-semibold text-white disabled:opacity-60"
+                    style={{ background: "#E11D2A", boxShadow: "0 8px 24px rgba(225,29,42,0.45)" }}
+                  >
+                    <PlayIcon className="w-3 h-3" />
+                    {markingDone ? "..." : "סיימתי!"}
+                  </button>
+                )}
               </div>
             </div>
 
