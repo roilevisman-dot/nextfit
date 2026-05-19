@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Client = {
@@ -50,6 +51,7 @@ function UserIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -138,12 +140,13 @@ export default function ClientsPage() {
             {clients.map((client, i) => (
               <div
                 key={client.id}
-                className="rounded-2xl p-4 rise"
+                className="tap rounded-2xl p-4 rise cursor-pointer"
                 style={{
                   animationDelay: `${i * 55}ms`,
                   background: "rgba(255,255,255,0.04)",
                   boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
                 }}
+                onClick={() => router.push(`/clients/${client.id}`)}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div
@@ -185,7 +188,7 @@ export default function ClientsPage() {
                       color: copied === client.invite_code ? "#10B981" : "rgba(255,255,255,0.55)",
                       boxShadow: `inset 0 0 0 1px ${copied === client.invite_code ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.08)"}`,
                     }}
-                    onClick={() => copyCode(client.invite_code)}
+                    onClick={(e) => { e.stopPropagation(); copyCode(client.invite_code); }}
                   >
                     <CopyIcon className="w-3 h-3" />
                     {copied === client.invite_code ? "הועתק!" : "העתק"}
