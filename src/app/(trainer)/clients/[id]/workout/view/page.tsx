@@ -51,6 +51,7 @@ export default function WorkoutViewPage() {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
+  const [durationWeeks, setDurationWeeks] = useState<number | null>(null);
 
   const supabase = createClient();
 
@@ -73,11 +74,12 @@ export default function WorkoutViewPage() {
 
       const { data: planData } = await supabase
         .from("workout_plans")
-        .select("days_per_week")
+        .select("days_per_week, duration_weeks")
         .eq("id", cp.plan_id)
         .single();
 
       if (!planData) { setLoading(false); return; }
+      if (planData.duration_weeks) setDurationWeeks(planData.duration_weeks);
 
       const { data: wdays } = await supabase
         .from("workout_days")
@@ -156,12 +158,15 @@ export default function WorkoutViewPage() {
           <h1 className="mt-1 text-[24px] font-extrabold">{clientName}</h1>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.30)" }}>{days.length} ימי אימון בשבוע</p>
-            {planStartDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium"
-                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
-                יום {Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1)} לתוכנית
-              </span>
-            )}
+            {planStartDate && (() => {
+              const dayNum = Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1);
+              return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium"
+                  style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
+                  {durationWeeks ? `יום ${dayNum} מתוך ${durationWeeks * 7}` : `יום ${dayNum} לתוכנית`}
+                </span>
+              );
+            })()}
           </div>
         </div>
 

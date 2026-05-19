@@ -25,6 +25,7 @@ type WorkoutDay = {
 type Plan = {
   name: string;
   days_per_week: number;
+  duration_weeks: number | null;
   days: WorkoutDay[];
 };
 
@@ -91,7 +92,7 @@ export default function WorkoutPage() {
 
     const { data: planData } = await supabase
       .from("workout_plans")
-      .select("name, days_per_week")
+      .select("name, days_per_week, duration_weeks")
       .eq("id", cp.plan_id)
       .single();
 
@@ -125,7 +126,7 @@ export default function WorkoutPage() {
       .in("day_id", dayIds);
     setCompletedDays(new Set(sessions?.map((s) => s.day_id) ?? []));
 
-    setPlan({ ...planData, days: daysWithExercises });
+    setPlan({ ...planData, duration_weeks: planData.duration_weeks ?? null, days: daysWithExercises });
     setLoading(false);
   }, [supabase]);
 
@@ -206,12 +207,15 @@ export default function WorkoutPage() {
             <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.50)" }}>
               {plan.days_per_week} ימי אימון · {totalExercises} תרגילים סה״כ
             </p>
-            {planStartDate && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
-                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
-                יום {Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1)} לתוכנית
-              </span>
-            )}
+            {planStartDate && (() => {
+              const dayNum = Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1);
+              return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
+                  style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
+                  {plan.duration_weeks ? `יום ${dayNum} מתוך ${plan.duration_weeks * 7}` : `יום ${dayNum} לתוכנית`}
+                </span>
+              );
+            })()}
           </div>
         </div>
 

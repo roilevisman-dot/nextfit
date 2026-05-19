@@ -80,6 +80,7 @@ export default function ClientWorkoutPage() {
 
   const [clientName, setClientName] = useState("");
   const [numDays, setNumDays] = useState(3);
+  const [durationWeeks, setDurationWeeks] = useState<number | null>(null);
   const [activeDay, setActiveDay] = useState(0);
   const [days, setDays] = useState<WorkoutDay[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
@@ -114,12 +115,13 @@ export default function ClientWorkoutPage() {
 
         const { data: planData } = await supabase
           .from("workout_plans")
-          .select("days_per_week")
+          .select("days_per_week, duration_weeks")
           .eq("id", cp.plan_id)
           .single();
 
         if (planData) {
           const n = planData.days_per_week;
+          setDurationWeeks(planData.duration_weeks ?? null);
           setNumDays(n);
 
           const { data: wdays } = await supabase
@@ -210,13 +212,13 @@ export default function ClientWorkoutPage() {
 
       if (currentPlanId) {
         // Update existing plan — delete all days (cascade deletes exercises) then re-insert
-        await supabase.from("workout_plans").update({ days_per_week: numDays }).eq("id", currentPlanId);
+        await supabase.from("workout_plans").update({ days_per_week: numDays, duration_weeks: durationWeeks }).eq("id", currentPlanId);
         await supabase.from("workout_days").delete().eq("plan_id", currentPlanId);
       } else {
         // Create new plan
         const { data: newPlan, error: planErr } = await supabase
           .from("workout_plans")
-          .insert({ coach_id: user.id, name: `תוכנית ${clientName}`, days_per_week: numDays })
+          .insert({ coach_id: user.id, name: `תוכנית ${clientName}`, days_per_week: numDays, duration_weeks: durationWeeks })
           .select()
           .single();
         if (planErr || !newPlan) throw new Error(planErr?.message ?? "שגיאה ביצירת תוכנית");
@@ -301,6 +303,20 @@ export default function ClientWorkoutPage() {
                 className="tap flex-1 h-9 rounded-xl text-[13px] font-semibold"
                 style={{ background: numDays === n ? "#E11D2A" : "rgba(255,255,255,0.05)", color: numDays === n ? "#fff" : "rgba(255,255,255,0.45)", boxShadow: numDays === n ? "0 4px 14px rgba(225,29,42,0.35)" : "none" }}>
                 {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Duration selector */}
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
+          <p className="text-[11px] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>משך התוכנית</p>
+          <div className="flex gap-2 overflow-x-auto pb-0.5">
+            {([null, 4, 6, 8, 12, 16] as (number | null)[]).map((w) => (
+              <button key={w ?? "inf"} onClick={() => setDurationWeeks(w)}
+                className="tap flex-shrink-0 px-3.5 h-9 rounded-xl text-[12.5px] font-semibold"
+                style={{ background: durationWeeks === w ? "#E11D2A" : "rgba(255,255,255,0.05)", color: durationWeeks === w ? "#fff" : "rgba(255,255,255,0.45)", boxShadow: durationWeeks === w ? "0 4px 14px rgba(225,29,42,0.35)" : "none" }}>
+                {w ? `${w} שב׳` : "ללא הגבלה"}
               </button>
             ))}
           </div>
