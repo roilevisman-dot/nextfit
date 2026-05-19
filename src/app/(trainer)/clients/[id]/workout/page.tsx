@@ -250,7 +250,7 @@ export default function ClientWorkoutPage() {
       }
 
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setTimeout(() => router.push(`/clients/${clientId}/workout/view`), 1000);
     } catch (err) {
       console.error("Save error:", err);
       setSaveError(true);
