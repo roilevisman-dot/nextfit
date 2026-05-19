@@ -49,12 +49,14 @@ export default function WorkoutViewPage() {
       const { data: clientData } = await supabase.from("clients").select("name").eq("id", clientId).single();
       if (clientData) setClientName(clientData.name);
 
-      const { data: cp } = await supabase
+      const { data: cpRows } = await supabase
         .from("client_plans")
         .select("plan_id")
         .eq("client_id", clientId)
         .eq("active", true)
-        .maybeSingle();
+        .order("id", { ascending: false })
+        .limit(1);
+      const cp = cpRows?.[0] ?? null;
 
       if (!cp?.plan_id) { setLoading(false); return; }
 

@@ -100,12 +100,14 @@ export default function ClientWorkoutPage() {
       const { data: clientData } = await supabase.from("clients").select("name").eq("id", clientId).single();
       if (clientData) setClientName(clientData.name);
 
-      const { data: cp } = await supabase
+      const { data: cpRows } = await supabase
         .from("client_plans")
         .select("plan_id")
         .eq("client_id", clientId)
         .eq("active", true)
-        .maybeSingle();
+        .order("id", { ascending: false })
+        .limit(1);
+      const cp = cpRows?.[0] ?? null;
 
       if (cp?.plan_id) {
         setPlanId(cp.plan_id);
@@ -220,6 +222,8 @@ export default function ClientWorkoutPage() {
         if (planErr || !newPlan) throw new Error(planErr?.message ?? "שגיאה ביצירת תוכנית");
         currentPlanId = newPlan.id;
         setPlanId(currentPlanId);
+        // מחק קשרים ישנים לפני יצירת חדש
+        await supabase.from("client_plans").delete().eq("client_id", clientId);
         await supabase.from("client_plans").insert({ client_id: clientId, plan_id: currentPlanId, active: true });
       }
 
