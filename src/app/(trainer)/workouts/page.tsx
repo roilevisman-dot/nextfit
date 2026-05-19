@@ -20,14 +20,7 @@ function DumbbellIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-function EditIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
+
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -147,17 +140,16 @@ export default function WorkoutsPage() {
                 </p>
               )}
 
-              {/* Edit buttons per client */}
+              {/* View buttons per client */}
               <div className="flex flex-col gap-1.5">
                 {plan.clients.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => router.push(`/clients/${c.id}/workout`)}
+                    onClick={() => router.push(`/clients/${c.id}/workout/view`)}
                     className="tap w-full h-9 rounded-xl text-[12.5px] font-medium flex items-center justify-center gap-2"
-                    style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+                    style={{ background: "rgba(225,29,42,0.10)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.20)", color: "#E11D2A" }}
                   >
-                    <EditIcon className="w-3.5 h-3.5" />
-                    ערוך — {c.name}
+                    צפה בתוכנית — {c.name}
                   </button>
                 ))}
                 {plan.clients.length === 0 && (
