@@ -14,6 +14,13 @@ type Client = {
   goal_weight: number | null;
 };
 
+const EMPTY_FORM = {
+  name: "", age: "", phone: "", email: "",
+  height_cm: "", current_weight: "", goal_weight: "", goal: "",
+  chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "",
+};
+type NewForm = typeof EMPTY_FORM;
+
 function generateCode(): string {
   return String(Math.floor(10000 + Math.random() * 90000));
 }
@@ -50,16 +57,27 @@ function UserIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+const INP_STYLE = {
+  background: "rgba(255,255,255,0.07)",
+  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)",
+  caretColor: "#E11D2A",
+} as const;
+
+const INP_CLASS = "w-full h-11 rounded-xl px-3 text-white text-[14px] outline-none";
+
 export default function ClientsPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [newClient, setNewClient] = useState<NewForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  const set = (key: keyof NewForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setNewClient((p) => ({ ...p, [key]: e.target.value }));
 
   const fetchClients = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -77,16 +95,29 @@ export default function ClientsPage() {
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
   const addClient = async () => {
-    if (!newName.trim()) return;
+    if (!newClient.name.trim()) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); return; }
+    const n = newClient;
     const { error } = await supabase.from("clients").insert({
       coach_id: user.id,
-      name: newName.trim(),
+      name: n.name.trim(),
       invite_code: generateCode(),
+      age: n.age ? parseInt(n.age) : null,
+      phone: n.phone.trim() || null,
+      email: n.email.trim() || null,
+      height_cm: n.height_cm ? parseFloat(n.height_cm) : null,
+      current_weight: n.current_weight ? parseFloat(n.current_weight) : null,
+      goal_weight: n.goal_weight ? parseFloat(n.goal_weight) : null,
+      goal: n.goal.trim() || null,
+      chest_cm: n.chest_cm ? parseFloat(n.chest_cm) : null,
+      waist_cm: n.waist_cm ? parseFloat(n.waist_cm) : null,
+      hips_cm: n.hips_cm ? parseFloat(n.hips_cm) : null,
+      arm_cm: n.arm_cm ? parseFloat(n.arm_cm) : null,
+      thigh_cm: n.thigh_cm ? parseFloat(n.thigh_cm) : null,
     });
-    if (!error) { setNewName(""); setShowModal(false); fetchClients(); }
+    if (!error) { setNewClient(EMPTY_FORM); setShowModal(false); fetchClients(); }
     setSaving(false);
   };
 
@@ -208,31 +239,115 @@ export default function ClientsPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="w-full rounded-t-3xl p-6 pb-12"
-            style={{ background: "#111009", boxShadow: "0 -1px 0 rgba(255,255,255,0.08)" }}
+            className="w-full rounded-t-3xl flex flex-col"
+            style={{ background: "#111009", boxShadow: "0 -1px 0 rgba(255,255,255,0.08)", maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-8 h-1 rounded-full mx-auto mb-5" style={{ background: "rgba(255,255,255,0.15)" }} />
-            <h3 className="text-[18px] font-bold mb-1">מתאמן חדש</h3>
-            <p className="text-[12px] text-white/40 mb-4">יווצר קוד הצטרפות אוטומטית</p>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="שם מלא"
-              className="w-full h-14 rounded-2xl px-4 text-white text-[16px] outline-none"
-              style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1.5px rgba(225,29,42,0.35)", caretColor: "#E11D2A" }}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && addClient()}
-            />
-            <button
-              className="tap mt-3 w-full h-12 rounded-full font-semibold text-white disabled:opacity-40"
-              style={{ background: "#E11D2A", boxShadow: "0 10px 24px rgba(225,29,42,0.40)" }}
-              onClick={addClient}
-              disabled={saving || !newName.trim()}
-            >
-              {saving ? "יוצר..." : "צור קוד הצטרפות"}
-            </button>
+            {/* Header */}
+            <div className="px-6 pt-5 pb-3 flex-shrink-0">
+              <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
+              <div className="flex items-center justify-between">
+                <h3 className="text-[18px] font-bold">מתאמן חדש</h3>
+                <button onClick={() => setShowModal(false)} className="tap text-[13px]" style={{ color: "rgba(255,255,255,0.40)" }}>ביטול</button>
+              </div>
+            </div>
+
+            {/* Scrollable form */}
+            <div className="overflow-y-auto flex-1 px-6 space-y-5 pb-4">
+
+              {/* Contact */}
+              <div className="space-y-3">
+                <p className="text-[10px] tracking-[0.30em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>פרטי קשר</p>
+                <div>
+                  <p className="text-[10.5px] text-white/40 mb-1.5">שם מלא *</p>
+                  <input
+                    type="text" value={newClient.name} onChange={set("name")}
+                    placeholder="ישראל ישראלי" className={INP_CLASS} autoFocus
+                    style={{ ...INP_STYLE, boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.35)" }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">גיל</p>
+                    <input type="number" inputMode="numeric" value={newClient.age} onChange={set("age")} placeholder="25" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">טלפון</p>
+                    <input type="tel" inputMode="tel" value={newClient.phone} onChange={set("phone")} placeholder="050-0000000" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10.5px] text-white/40 mb-1.5">אימייל</p>
+                  <input type="email" inputMode="email" value={newClient.email} onChange={set("email")} placeholder="israel@example.com" className={INP_CLASS} style={INP_STYLE} />
+                </div>
+              </div>
+
+              {/* Physical */}
+              <div className="space-y-3">
+                <p className="text-[10px] tracking-[0.30em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>פרטים גופניים</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">גובה (ס&quot;מ)</p>
+                    <input type="number" inputMode="decimal" value={newClient.height_cm} onChange={set("height_cm")} placeholder="175" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">משקל התחלתי (ק&quot;ג)</p>
+                    <input type="number" inputMode="decimal" value={newClient.current_weight} onChange={set("current_weight")} placeholder="80" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">משקל יעד (ק&quot;ג)</p>
+                    <input type="number" inputMode="decimal" value={newClient.goal_weight} onChange={set("goal_weight")} placeholder="70" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10.5px] text-white/40 mb-1.5">מטרה</p>
+                  <input type="text" value={newClient.goal} onChange={set("goal")} placeholder="הורדת שומן, חיזוק שרירים..." className={INP_CLASS} style={INP_STYLE} />
+                </div>
+              </div>
+
+              {/* Circumferences */}
+              <div className="space-y-3">
+                <p className="text-[10px] tracking-[0.30em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>היקפים (ס&quot;מ)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">חזה</p>
+                    <input type="number" inputMode="decimal" value={newClient.chest_cm} onChange={set("chest_cm")} placeholder="100" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">מותניים</p>
+                    <input type="number" inputMode="decimal" value={newClient.waist_cm} onChange={set("waist_cm")} placeholder="85" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">ירכיים</p>
+                    <input type="number" inputMode="decimal" value={newClient.hips_cm} onChange={set("hips_cm")} placeholder="100" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">זרוע</p>
+                    <input type="number" inputMode="decimal" value={newClient.arm_cm} onChange={set("arm_cm")} placeholder="35" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">ירך</p>
+                    <input type="number" inputMode="decimal" value={newClient.thigh_cm} onChange={set("thigh_cm")} placeholder="55" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Save */}
+            <div className="px-6 pb-10 pt-3 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <button
+                className="tap w-full h-12 rounded-full font-semibold text-white disabled:opacity-40"
+                style={{ background: "#E11D2A", boxShadow: "0 10px 24px rgba(225,29,42,0.40)" }}
+                onClick={addClient}
+                disabled={saving || !newClient.name.trim()}
+              >
+                {saving ? "יוצר..." : "צור קוד הצטרפות"}
+              </button>
+            </div>
           </div>
         </div>
       )}
