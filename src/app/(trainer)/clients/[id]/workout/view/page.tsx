@@ -50,6 +50,7 @@ export default function WorkoutViewPage() {
   const [activeDay, setActiveDay] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -60,7 +61,7 @@ export default function WorkoutViewPage() {
 
       const { data: cpRows } = await supabase
         .from("client_plans")
-        .select("plan_id")
+        .select("plan_id, created_at")
         .eq("client_id", clientId)
         .eq("active", true)
         .order("id", { ascending: false })
@@ -68,6 +69,7 @@ export default function WorkoutViewPage() {
       const cp = cpRows?.[0] ?? null;
 
       if (!cp?.plan_id) { setLoading(false); return; }
+      if (cp.created_at) setPlanStartDate(cp.created_at);
 
       const { data: planData } = await supabase
         .from("workout_plans")
@@ -152,7 +154,15 @@ export default function WorkoutViewPage() {
         <div className="rise">
           <div className="text-[10.5px] tracking-[0.34em] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>תוכנית אימון</div>
           <h1 className="mt-1 text-[24px] font-extrabold">{clientName}</h1>
-          <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{days.length} ימי אימון בשבוע</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.30)" }}>{days.length} ימי אימון בשבוע</p>
+            {planStartDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium"
+                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
+                יום {Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1)} לתוכנית
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Day tabs */}

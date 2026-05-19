@@ -69,6 +69,7 @@ export default function WorkoutPage() {
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [markingDone, setMarkingDone] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -79,13 +80,14 @@ export default function WorkoutPage() {
 
     const { data: cpRows } = await supabase
       .from("client_plans")
-      .select("plan_id")
+      .select("plan_id, created_at")
       .eq("client_id", cid)
       .eq("active", true)
       .order("id", { ascending: false })
       .limit(1);
     const cp = cpRows?.[0] ?? null;
     if (!cp) { setLoading(false); return; }
+    if (cp.created_at) setPlanStartDate(cp.created_at);
 
     const { data: planData } = await supabase
       .from("workout_plans")
@@ -200,9 +202,17 @@ export default function WorkoutPage() {
           <h1 className="mt-1 text-[28px] leading-[1.1] tracking-tight text-white font-extrabold">
             {plan.name}
           </h1>
-          <p className="text-[13px] mt-1.5" style={{ color: "rgba(255,255,255,0.50)" }}>
-            {plan.days_per_week} ימי אימון · {totalExercises} תרגילים סה״כ
-          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.50)" }}>
+              {plan.days_per_week} ימי אימון · {totalExercises} תרגילים סה״כ
+            </p>
+            {planStartDate && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
+                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
+                יום {Math.max(1, Math.floor((Date.now() - new Date(planStartDate).getTime()) / 86400000) + 1)} לתוכנית
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Day tabs */}
