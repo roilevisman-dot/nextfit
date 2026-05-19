@@ -79,6 +79,8 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planDayNum, setPlanDayNum] = useState<number | null>(null);
+  const [planTotalDays, setPlanTotalDays] = useState<number | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "" });
   const [editSaving, setEditSaving] = useState(false);
@@ -92,6 +94,22 @@ export default function ClientDetailPage() {
     ]);
     if (clientData) setClient(clientData);
     if (logsData) setWeightLogs(logsData);
+
+    const { data: cpRows } = await supabase
+      .from("client_plans")
+      .select("created_at, plan_id")
+      .eq("client_id", clientId)
+      .eq("active", true)
+      .order("id", { ascending: false })
+      .limit(1);
+    const cp = cpRows?.[0];
+    if (cp) {
+      const dayNum = Math.max(1, Math.floor((Date.now() - new Date(cp.created_at).getTime()) / 86400000) + 1);
+      setPlanDayNum(dayNum);
+      const { data: planData } = await supabase.from("workout_plans").select("duration_weeks").eq("id", cp.plan_id).single();
+      if (planData?.duration_weeks) setPlanTotalDays(planData.duration_weeks * 7);
+    }
+
     setLoading(false);
   }, [supabase, clientId]);
 
@@ -225,6 +243,17 @@ export default function ClientDetailPage() {
               פעיל
             </span>
           </div>
+
+          {/* Plan duration */}
+          {planDayNum !== null && (
+            <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>משך התוכנית</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium"
+                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
+                {planTotalDays ? `יום ${planDayNum} מתוך ${planTotalDays}` : `יום ${planDayNum} לתוכנית`}
+              </span>
+            </div>
+          )}
 
           {/* Stat chips */}
           <div className="grid grid-cols-3 gap-2 mt-4">
