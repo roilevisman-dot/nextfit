@@ -229,30 +229,37 @@ export default function WorkoutViewPage() {
           </div>
         )}
 
-        {/* Session history */}
-        {sessions.length > 0 && (
+        {/* Session history — always visible */}
+        {days.length > 0 && (
           <div className="rise mt-2" style={{ animationDelay: "80ms" }}>
             <p className="text-[12px] font-semibold mb-2.5" style={{ color: "rgba(255,255,255,0.45)" }}>פעילות 14 ימים אחרונים</p>
-            <div className="space-y-2">
-              {sessions.map((s) => {
-                const dayLabel = days.find((d) => d.id === s.day_id)?.label ?? "אימון";
-                const date = new Date(s.session_date);
-                const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}`;
-                return (
-                  <div key={s.id} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5"
-                    style={{ background: "rgba(16,185,129,0.07)", boxShadow: "inset 0 0 0 1px rgba(16,185,129,0.18)" }}>
-                    <div className="w-6 h-6 rounded-full grid place-items-center flex-shrink-0"
-                      style={{ background: "rgba(16,185,129,0.15)" }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 13l4 4L19 7"/></svg>
+            {sessions.length === 0 ? (
+              <div className="rounded-xl px-4 py-3 text-center"
+                style={{ background: "rgba(255,255,255,0.03)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}>
+                <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.30)" }}>אין אימונים מתועדים עדיין</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {sessions.map((s) => {
+                  const dayLabel = days.find((d) => d.id === s.day_id)?.label ?? "אימון";
+                  const date = new Date(s.session_date);
+                  const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}`;
+                  return (
+                    <div key={s.id} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5"
+                      style={{ background: "rgba(16,185,129,0.07)", boxShadow: "inset 0 0 0 1px rgba(16,185,129,0.18)" }}>
+                      <div className="w-6 h-6 rounded-full grid place-items-center flex-shrink-0"
+                        style={{ background: "rgba(16,185,129,0.15)" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 13l4 4L19 7"/></svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[12.5px] font-semibold">{dayLabel}</p>
+                      </div>
+                      <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>{dateStr}</p>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-[12.5px] font-semibold">{dayLabel}</p>
-                    </div>
-                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>{dateStr}</p>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
