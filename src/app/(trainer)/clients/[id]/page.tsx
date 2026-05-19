@@ -30,7 +30,7 @@ type WeightLog = {
 
 type EditForm = {
   age: string; phone: string; email: string; height_cm: string;
-  goal_weight: string; goal: string;
+  current_weight: string; goal_weight: string; goal: string;
   chest_cm: string; waist_cm: string; hips_cm: string; arm_cm: string; thigh_cm: string;
 };
 
@@ -82,7 +82,7 @@ export default function ClientDetailPage() {
   const [planDayNum, setPlanDayNum] = useState<number | null>(null);
   const [planTotalDays, setPlanTotalDays] = useState<number | null>(null);
   const [showEdit, setShowEdit] = useState(false);
-  const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", current_weight: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "" });
   const [editSaving, setEditSaving] = useState(false);
 
   const supabase = createClient();
@@ -122,6 +122,7 @@ export default function ClientDetailPage() {
       phone: client.phone ?? "",
       email: client.email ?? "",
       height_cm: client.height_cm?.toString() ?? "",
+      current_weight: client.current_weight?.toString() ?? "",
       goal_weight: client.goal_weight?.toString() ?? "",
       goal: client.goal ?? "",
       chest_cm: client.chest_cm?.toString() ?? "",
@@ -141,6 +142,7 @@ export default function ClientDetailPage() {
       phone: f.phone.trim() || null,
       email: f.email.trim() || null,
       height_cm: f.height_cm ? parseFloat(f.height_cm) : null,
+      current_weight: f.current_weight ? parseFloat(f.current_weight) : null,
       goal_weight: f.goal_weight ? parseFloat(f.goal_weight) : null,
       goal: f.goal.trim() || null,
       chest_cm: f.chest_cm ? parseFloat(f.chest_cm) : null,
@@ -372,6 +374,12 @@ export default function ClientDetailPage() {
                     <p className="text-[10.5px] text-white/40 mb-1.5">גובה (ס&quot;מ)</p>
                     <input type="number" inputMode="decimal" value={editForm.height_cm} onChange={setF("height_cm")} placeholder="175" className={INP_CLASS} style={INP_STYLE} />
                   </div>
+                  <div>
+                    <p className="text-[10.5px] text-white/40 mb-1.5">משקל נוכחי (ק&quot;ג)</p>
+                    <input type="number" inputMode="decimal" value={editForm.current_weight} onChange={setF("current_weight")} placeholder="85" className={INP_CLASS} style={INP_STYLE} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-[10.5px] text-white/40 mb-1.5">משקל יעד (ק&quot;ג)</p>
                     <input type="number" inputMode="decimal" value={editForm.goal_weight} onChange={setF("goal_weight")} placeholder="70" className={INP_CLASS} style={INP_STYLE} />
