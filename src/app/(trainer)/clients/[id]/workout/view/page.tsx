@@ -62,7 +62,7 @@ export default function WorkoutViewPage() {
 
       const { data: cpRows } = await supabase
         .from("client_plans")
-        .select("plan_id, created_at")
+        .select("plan_id")
         .eq("client_id", clientId)
         .eq("active", true)
         .order("id", { ascending: false })
@@ -70,16 +70,16 @@ export default function WorkoutViewPage() {
       const cp = cpRows?.[0] ?? null;
 
       if (!cp?.plan_id) { setLoading(false); return; }
-      if (cp.created_at) setPlanStartDate(cp.created_at);
 
       const { data: planData } = await supabase
         .from("workout_plans")
-        .select("days_per_week, duration_weeks")
+        .select("days_per_week, duration_weeks, created_at")
         .eq("id", cp.plan_id)
         .single();
 
       if (!planData) { setLoading(false); return; }
       if (planData.duration_weeks) setDurationWeeks(planData.duration_weeks);
+      if (planData.created_at) setPlanStartDate(planData.created_at);
 
       const { data: wdays } = await supabase
         .from("workout_days")

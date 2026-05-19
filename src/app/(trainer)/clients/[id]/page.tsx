@@ -93,7 +93,7 @@ export default function ClientDetailPage() {
 
     const { data: cpRows } = await supabase
       .from("client_plans")
-      .select("created_at, plan_id")
+      .select("plan_id")
       .eq("client_id", clientId)
       .eq("active", true)
       .order("id", { ascending: false })
@@ -101,12 +101,18 @@ export default function ClientDetailPage() {
     const cp = cpRows?.[0];
     if (cp) {
       setActivePlanId(cp.plan_id);
-      const dayNum = Math.max(1, Math.floor((Date.now() - new Date(cp.created_at).getTime()) / 86400000) + 1);
-      setPlanDayNum(dayNum);
-      const { data: planData } = await supabase.from("workout_plans").select("duration_weeks").eq("id", cp.plan_id).single();
-      const dw = planData?.duration_weeks ?? null;
-      setDurationWeeks(dw);
-      if (dw) setPlanTotalDays(dw * 7);
+      const { data: planData } = await supabase
+        .from("workout_plans")
+        .select("duration_weeks, created_at")
+        .eq("id", cp.plan_id)
+        .single();
+      if (planData) {
+        const dw = planData.duration_weeks ?? null;
+        setDurationWeeks(dw);
+        if (dw) setPlanTotalDays(dw * 7);
+        const dayNum = Math.max(1, Math.floor((Date.now() - new Date(planData.created_at).getTime()) / 86400000) + 1);
+        setPlanDayNum(dayNum);
+      }
     }
 
     setLoading(false);

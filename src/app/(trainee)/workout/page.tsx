@@ -81,18 +81,17 @@ export default function WorkoutPage() {
 
     const { data: cpRows } = await supabase
       .from("client_plans")
-      .select("plan_id, created_at")
+      .select("plan_id")
       .eq("client_id", cid)
       .eq("active", true)
       .order("id", { ascending: false })
       .limit(1);
     const cp = cpRows?.[0] ?? null;
     if (!cp) { setLoading(false); return; }
-    if (cp.created_at) setPlanStartDate(cp.created_at);
 
     const { data: planData } = await supabase
       .from("workout_plans")
-      .select("name, days_per_week, duration_weeks")
+      .select("name, days_per_week, duration_weeks, created_at")
       .eq("id", cp.plan_id)
       .single();
 
@@ -126,6 +125,7 @@ export default function WorkoutPage() {
       .in("day_id", dayIds);
     setCompletedDays(new Set(sessions?.map((s) => s.day_id) ?? []));
 
+    if (planData.created_at) setPlanStartDate(planData.created_at);
     setPlan({ ...planData, duration_weeks: planData.duration_weeks ?? null, days: daysWithExercises });
     setLoading(false);
   }, [supabase]);
