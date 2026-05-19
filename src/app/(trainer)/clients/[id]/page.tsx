@@ -23,10 +23,6 @@ type Client = {
   thigh_cm: number | null;
 };
 
-type WeightLog = {
-  weight: number;
-  logged_at: string;
-};
 
 type EditForm = {
   age: string; phone: string; email: string; height_cm: string;
@@ -77,10 +73,14 @@ export default function ClientDetailPage() {
   const clientId = params.id as string;
 
   const [client, setClient] = useState<Client | null>(null);
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [planDayNum, setPlanDayNum] = useState<number | null>(null);
   const [planTotalDays, setPlanTotalDays] = useState<number | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [durationWeeks, setDurationWeeks] = useState<number | null>(null);
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [pickerDuration, setPickerDuration] = useState<number | null>(null);
+  const [savingDuration, setSavingDuration] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", current_weight: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "" });
   const [editSaving, setEditSaving] = useState(false);
@@ -88,12 +88,8 @@ export default function ClientDetailPage() {
   const supabase = createClient();
 
   const fetchClient = useCallback(async () => {
-    const [{ data: clientData }, { data: logsData }] = await Promise.all([
-      supabase.from("clients").select("*").eq("id", clientId).single(),
-      supabase.from("weight_logs").select("weight, logged_at").eq("client_id", clientId).order("logged_at", { ascending: false }).limit(10),
-    ]);
+    const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
     if (clientData) setClient(clientData);
-    if (logsData) setWeightLogs(logsData);
 
     const { data: cpRows } = await supabase
       .from("client_plans")
@@ -104,10 +100,13 @@ export default function ClientDetailPage() {
       .limit(1);
     const cp = cpRows?.[0];
     if (cp) {
+      setActivePlanId(cp.plan_id);
       const dayNum = Math.max(1, Math.floor((Date.now() - new Date(cp.created_at).getTime()) / 86400000) + 1);
       setPlanDayNum(dayNum);
       const { data: planData } = await supabase.from("workout_plans").select("duration_weeks").eq("id", cp.plan_id).single();
-      if (planData?.duration_weeks) setPlanTotalDays(planData.duration_weeks * 7);
+      const dw = planData?.duration_weeks ?? null;
+      setDurationWeeks(dw);
+      if (dw) setPlanTotalDays(dw * 7);
     }
 
     setLoading(false);
@@ -159,10 +158,17 @@ export default function ClientDetailPage() {
   const setF = (key: keyof EditForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setEditForm((p) => ({ ...p, [key]: e.target.value }));
 
+  const saveDuration = async () => {
+    if (!activePlanId) return;
+    setSavingDuration(true);
+    await supabase.from("workout_plans").update({ duration_weeks: pickerDuration }).eq("id", activePlanId);
+    setDurationWeeks(pickerDuration);
+    setPlanTotalDays(pickerDuration ? pickerDuration * 7 : null);
+    setShowDurationPicker(false);
+    setSavingDuration(false);
+  };
+
   const avatarColor = avatarColors[0];
-  const weightDelta = weightLogs.length >= 2
-    ? (weightLogs[0].weight - weightLogs[weightLogs.length - 1].weight).toFixed(1)
-    : null;
   const daysSinceJoin = client
     ? Math.floor((Date.now() - new Date(client.created_at).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
@@ -246,23 +252,11 @@ export default function ClientDetailPage() {
             </span>
           </div>
 
-          {/* Plan duration */}
-          {planDayNum !== null && (
-            <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>משך התוכנית</span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium"
-                style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)", color: "#FF8A95" }}>
-                {planTotalDays ? `יום ${planDayNum} מתוך ${planTotalDays}` : `יום ${planDayNum} לתוכנית`}
-              </span>
-            </div>
-          )}
-
           {/* Stat chips */}
           <div className="grid grid-cols-3 gap-2 mt-4">
             {[
-              { Icon: WeightIcon, label: "משקל נוכחי", value: client.current_weight ? `${client.current_weight} ק״ג` : "—", color: "#E11D2A" },
-              { Icon: TargetIcon, label: "יעד", value: client.goal_weight ? `${client.goal_weight} ק״ג` : "—", color: "#F97316" },
-              { Icon: CalendarIcon, label: "שינוי", value: weightDelta !== null ? `${Number(weightDelta) > 0 ? "+" : ""}${weightDelta}` : "—", color: Number(weightDelta) < 0 ? "#10B981" : "#F97316" },
+              { Icon: WeightIcon, label: "משקל נוכחי", value: client.current_weight ? `${client.current_weight} ק״ג` : "—", color: "#E11D2A", onClick: undefined },
+              { Icon: TargetIcon, label: "יעד", value: client.goal_weight ? `${client.goal_weight} ק״ג` : "—", color: "#F97316", onClick: undefined },
             ].map(({ Icon, label, value, color }, i) => (
               <div key={i} className="rounded-2xl p-3 flex flex-col items-center gap-1.5" style={{ background: "rgba(255,255,255,0.05)" }}>
                 <div className="w-7 h-7 rounded-xl grid place-items-center" style={{ background: color + "18" }}>
@@ -272,6 +266,22 @@ export default function ClientDetailPage() {
                 <p className="text-[9px] text-center leading-tight" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
               </div>
             ))}
+            {/* Duration chip — tappable */}
+            <button
+              onClick={() => { setPickerDuration(durationWeeks); setShowDurationPicker(true); }}
+              className="tap rounded-2xl p-3 flex flex-col items-center gap-1.5"
+              style={{ background: durationWeeks ? "rgba(225,29,42,0.08)" : "rgba(255,255,255,0.05)", boxShadow: durationWeeks ? "inset 0 0 0 1px rgba(225,29,42,0.20)" : "none" }}
+            >
+              <div className="w-7 h-7 rounded-xl grid place-items-center" style={{ background: "rgba(225,29,42,0.12)" }}>
+                <CalendarIcon className="w-3.5 h-3.5" style={{ color: "#E11D2A" }} />
+              </div>
+              <p className="text-[13px] font-bold leading-none" style={{ color: durationWeeks ? "#FF8A95" : undefined }}>
+                {durationWeeks ? `${durationWeeks} שב׳` : "—"}
+              </p>
+              <p className="text-[9px] text-center leading-tight" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {planDayNum && planTotalDays ? `יום ${planDayNum}/${planTotalDays}` : "משך תוכנית"}
+              </p>
+            </button>
           </div>
         </div>
 
@@ -430,6 +440,51 @@ export default function ClientDetailPage() {
                 {editSaving ? "שומר..." : "שמור שינויים"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duration picker */}
+      {showDurationPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-end"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)" }}
+          onClick={() => setShowDurationPicker(false)}
+        >
+          <div
+            className="w-full rounded-t-3xl p-6 pb-12"
+            style={{ background: "#111009", boxShadow: "0 -1px 0 rgba(255,255,255,0.08)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-8 h-1 rounded-full mx-auto mb-5" style={{ background: "rgba(255,255,255,0.15)" }} />
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[18px] font-bold">משך התוכנית</h3>
+              <button onClick={() => setShowDurationPicker(false)} className="tap text-[13px]" style={{ color: "rgba(255,255,255,0.40)" }}>ביטול</button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {([null, 4, 6, 8, 12, 16] as (number | null)[]).map((w) => (
+                <button
+                  key={w ?? "inf"}
+                  onClick={() => setPickerDuration(w)}
+                  className="tap h-12 rounded-2xl text-[13px] font-semibold"
+                  style={{
+                    background: pickerDuration === w ? "#E11D2A" : "rgba(255,255,255,0.06)",
+                    color: pickerDuration === w ? "#fff" : "rgba(255,255,255,0.50)",
+                    boxShadow: pickerDuration === w ? "0 4px 14px rgba(225,29,42,0.35)" : "none",
+                  }}
+                >
+                  {w ? `${w} שבועות` : "ללא הגבלה"}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={saveDuration}
+              disabled={savingDuration || !activePlanId}
+              className="tap w-full h-12 rounded-full font-semibold text-white disabled:opacity-40"
+              style={{ background: "#E11D2A", boxShadow: "0 10px 24px rgba(225,29,42,0.40)" }}
+            >
+              {savingDuration ? "שומר..." : "שמור"}
+            </button>
           </div>
         </div>
       )}
