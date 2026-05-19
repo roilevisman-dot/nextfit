@@ -65,9 +65,9 @@ function DumbIcon(props: React.SVGProps<SVGSVGElement>) {
 /* ─── Top bar ─── */
 function TopBar() {
   return (
-    <div className="flex items-center justify-between px-6 pt-4 pb-2">
+    <div className="flex items-center justify-between px-6 pt-[58px] pb-2">
       <NFMark size={30} />
-      <button className="tap relative w-9 h-9 grid place-items-center rounded-full" style={{ color: "#1E1E24" }}>
+      <button className="tap relative w-9 h-9 grid place-items-center rounded-full" style={{ color: "rgba(255,255,255,0.65)" }}>
         <BellIcon className="w-[18px] h-[18px]" />
         <span className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full" style={{ background: "#E11D2A" }} />
       </button>
@@ -78,22 +78,22 @@ function TopBar() {
 /* ─── Greeting ─── */
 function Greeting() {
   return (
-    <div className="px-6 pt-5 pb-5 rise" style={{ animationDelay: "40ms" }}>
-      <div className="flex items-center gap-2 text-[12px] tracking-wide mb-2" style={{ color: "#52525B" }}>
-        <span>ראשון · 18 במאי</span>
-        <span className="w-1 h-1 rounded-full" style={{ background: "#71717A" }} />
+    <div className="px-6 pt-4 pb-5 rise" style={{ animationDelay: "40ms" }}>
+      <div className="flex items-center gap-2 text-[12px] tracking-wide mb-2" style={{ color: "rgba(255,255,255,0.40)" }}>
+        <span>שני · 19 במאי</span>
+        <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
         <span className="inline-flex items-center gap-1" style={{ color: "#E11D2A" }}>
           <FlameIcon className="w-3.5 h-3.5" />
           <span className="nums font-medium">12 ימים</span>
         </span>
       </div>
-      <h1 className="text-[30px] leading-[1.15] tracking-tight" style={{ color: "#0A0A0C" }}>
+      <h1 className="text-[30px] leading-[1.15] tracking-tight" style={{ color: "#FAF9F6" }}>
         בוקר טוב,
         <br />
-        <span className="text-[36px] font-extrabold" style={{ color: "#0A0A0C" }}>יעל</span>
-        <span style={{ color: "#71717A" }}>.</span>
+        <span className="text-[36px] font-extrabold" style={{ color: "#FAF9F6" }}>יעל</span>
+        <span style={{ color: "rgba(255,255,255,0.30)" }}>.</span>
       </h1>
-      <p className="text-[14px] mt-2 leading-relaxed" style={{ color: "#52525B" }}>
+      <p className="text-[14px] mt-2 leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>
         עוד אימון אחד ואתה סוגרת שבוע מלא. בא לנו לראות.
       </p>
     </div>
@@ -215,32 +215,32 @@ function WeightTile() {
     <div
       className="rounded-3xl p-4 tap"
       style={{
-        background: "#FFFFFF",
-        boxShadow: "0 0 0 1px #ECEAE2, 0 1px 2px rgba(10,10,12,0.03)",
+        background: "rgba(255,255,255,0.04)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
       }}
     >
       <div className="flex items-center justify-between">
-        <div className="text-[11px] tracking-wide uppercase" style={{ color: "#52525B" }}>
+        <div className="text-[11px] tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.40)" }}>
           משקל
         </div>
         <div
           className="inline-flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full nums"
-          style={{ color: "#1F7A55", background: "rgba(31,122,85,0.10)" }}
+          style={{ color: "#10B981", background: "rgba(16,185,129,0.12)" }}
         >
           ↓ 0.3
         </div>
       </div>
       <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-[28px] leading-none nums tracking-tight font-extrabold" style={{ color: "#0A0A0C" }}>
+        <span className="text-[28px] leading-none nums tracking-tight font-extrabold" style={{ color: "#FAF9F6" }}>
           64.2
         </span>
-        <span className="text-[12px]" style={{ color: "#52525B" }}>ק״ג</span>
+        <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.40)" }}>ק״ג</span>
       </div>
       <div className="mt-2 -mx-1">
         <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="block">
           <defs>
             <linearGradient id="wgrad" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#E11D2A" stopOpacity="0.18" />
+              <stop offset="0%" stopColor="#E11D2A" stopOpacity="0.25" />
               <stop offset="100%" stopColor="#E11D2A" stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -255,7 +255,7 @@ function WeightTile() {
           })}
         </svg>
       </div>
-      <div className="mt-1 text-[11px]" style={{ color: "#52525B" }}>השבוע</div>
+      <div className="mt-1 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>השבוע</div>
     </div>
   );
 }
@@ -269,20 +269,20 @@ function HydrationTile() {
     <div
       className="rounded-3xl p-4 tap"
       style={{
-        background: "#FFFFFF",
-        boxShadow: "0 0 0 1px #ECEAE2, 0 1px 2px rgba(10,10,12,0.03)",
+        background: "rgba(255,255,255,0.04)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
       }}
     >
       <div className="flex items-center justify-between">
-        <div className="text-[11px] tracking-wide uppercase" style={{ color: "#52525B" }}>שתייה</div>
-        <button className="tap w-6 h-6 grid place-items-center rounded-full" style={{ background: "#FAF9F6", color: "#2D2D35" }}>
+        <div className="text-[11px] tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.40)" }}>שתייה</div>
+        <button className="tap w-6 h-6 grid place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.70)" }}>
           <PlusIcon className="w-3.5 h-3.5" />
         </button>
       </div>
       <div className="mt-1 flex items-center gap-3">
         <div className="relative w-[68px] h-[68px] -ml-1">
           <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-            <circle cx="40" cy="40" r={R} fill="none" stroke="#EFEDE6" strokeWidth="6" />
+            <circle cx="40" cy="40" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
             <circle
               cx="40" cy="40" r={R} fill="none"
               stroke="#E11D2A" strokeWidth="6"
@@ -295,11 +295,11 @@ function HydrationTile() {
           <DropIcon className="w-4 h-4 absolute inset-0 m-auto" style={{ color: "#E11D2A" }} />
         </div>
         <div>
-          <div className="text-[22px] leading-none nums font-bold" style={{ color: "#0A0A0C" }}>
+          <div className="text-[22px] leading-none nums font-bold" style={{ color: "#FAF9F6" }}>
             {current.toFixed(1)}
-            <span className="text-[12px] font-normal" style={{ color: "#52525B" }}> / {goal}L</span>
+            <span className="text-[12px] font-normal" style={{ color: "rgba(255,255,255,0.40)" }}> / {goal}L</span>
           </div>
-          <div className="mt-1.5 text-[11px] nums" style={{ color: "#52525B" }}>
+          <div className="mt-1.5 text-[11px] nums" style={{ color: "rgba(255,255,255,0.40)" }}>
             {Math.round(pct * 100)}% מהיעד
           </div>
         </div>
@@ -309,7 +309,7 @@ function HydrationTile() {
           <div
             key={i}
             className="h-1 flex-1 rounded-full"
-            style={{ background: on ? "#E11D2A" : "#ECEAE2" }}
+            style={{ background: on ? "#E11D2A" : "rgba(255,255,255,0.08)" }}
           />
         ))}
       </div>
@@ -336,17 +336,17 @@ function NutritionGlance() {
     <div className="px-5 mt-3 rise" style={{ animationDelay: "280ms" }}>
       <div
         className="rounded-3xl p-5 tap"
-        style={{ background: "#FFFFFF", boxShadow: "0 0 0 1px #ECEAE2, 0 1px 2px rgba(10,10,12,0.03)" }}
+        style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
       >
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-[11px] tracking-wide uppercase" style={{ color: "#52525B" }}>תפריט היום</div>
+            <div className="text-[11px] tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.40)" }}>תפריט היום</div>
             <div className="mt-1.5 flex items-baseline gap-1.5">
-              <span className="text-[26px] tracking-tight font-extrabold nums leading-none" style={{ color: "#0A0A0C" }}>1,840</span>
-              <span className="text-[12px] nums" style={{ color: "#52525B" }}>/ 2,100 קק״ל</span>
+              <span className="text-[26px] tracking-tight font-extrabold nums leading-none" style={{ color: "#FAF9F6" }}>1,840</span>
+              <span className="text-[12px] nums" style={{ color: "rgba(255,255,255,0.40)" }}>/ 2,100 קק״ל</span>
             </div>
           </div>
-          <button className="tap text-[12px] font-medium inline-flex items-center gap-0.5 px-2 h-7 rounded-full" style={{ color: "#2D2D35" }}>
+          <button className="tap text-[12px] font-medium inline-flex items-center gap-0.5 px-2 h-7 rounded-full" style={{ color: "rgba(255,255,255,0.55)" }}>
             פירוט
             <ArrowIcon className="w-3.5 h-3.5" />
           </button>
@@ -358,12 +358,12 @@ function NutritionGlance() {
             return (
               <div key={m.label}>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[11px]" style={{ color: "#52525B" }}>{m.label}</span>
-                  <span className="text-[11px] nums" style={{ color: "#2D2D35" }}>
-                    {m.value}<span style={{ color: "#71717A" }}>/{m.goal}g</span>
+                  <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>{m.label}</span>
+                  <span className="text-[11px] nums" style={{ color: "rgba(255,255,255,0.65)" }}>
+                    {m.value}<span style={{ color: "rgba(255,255,255,0.30)" }}>/{m.goal}g</span>
                   </span>
                 </div>
-                <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "#ECEAE2" }}>
+                <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
                   <div
                     className="h-full rounded-full barfill"
                     style={{
@@ -386,11 +386,11 @@ function NutritionGlance() {
               className="shrink-0 px-3 h-8 rounded-full inline-flex items-center gap-1.5 text-[12px]"
               style={
                 m.done
-                  ? { background: "#0A0A0C", color: "#ffffff" }
-                  : { background: "#FAF9F6", color: "#2D2D35", boxShadow: "inset 0 0 0 1px #ECEAE2" }
+                  ? { background: "rgba(225,29,42,0.15)", color: "#FAF9F6", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.30)" }
+                  : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.50)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }
               }
             >
-              {m.done && <CheckIcon className="w-3 h-3" />}
+              {m.done && <CheckIcon className="w-3 h-3" style={{ color: "#E11D2A" }} />}
               <span>{m.meal}</span>
               <span className="nums opacity-60">{m.kcal}</span>
             </div>
@@ -407,17 +407,17 @@ function UpNext() {
     <div className="px-5 mt-3 rise" style={{ animationDelay: "360ms" }}>
       <button
         className="w-full tap rounded-3xl p-4 flex items-center gap-3 text-right"
-        style={{ background: "#FAF9F6", boxShadow: "0 0 0 1px #ECEAE2" }}
+        style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
       >
-        <div className="w-10 h-10 rounded-2xl grid place-items-center" style={{ background: "#FDECEE", color: "#B81522" }}>
+        <div className="w-10 h-10 rounded-2xl grid place-items-center" style={{ background: "rgba(225,29,42,0.12)", color: "#E11D2A" }}>
           <DumbIcon className="w-5 h-5" />
         </div>
         <div className="flex-1">
-          <div className="text-[11px] tracking-wide uppercase" style={{ color: "#52525B" }}>הבא בתור · מחר</div>
-          <div className="mt-0.5 text-[14px] font-medium" style={{ color: "#141418" }}>רגליים · ירידה לעומק</div>
+          <div className="text-[11px] tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.40)" }}>הבא בתור · מחר</div>
+          <div className="mt-0.5 text-[14px] font-medium" style={{ color: "#FAF9F6" }}>רגליים · ירידה לעומק</div>
         </div>
-        <div className="text-[12px] nums" style={{ color: "#52525B" }}>52 דק׳</div>
-        <ArrowIcon className="w-4 h-4" style={{ color: "#71717A" }} />
+        <div className="text-[12px] nums" style={{ color: "rgba(255,255,255,0.40)" }}>52 דק׳</div>
+        <ArrowIcon className="w-4 h-4" style={{ color: "rgba(255,255,255,0.30)" }} />
       </button>
     </div>
   );
@@ -426,7 +426,7 @@ function UpNext() {
 /* ─── Page shell ─── */
 export default function HomePage() {
   return (
-    <div className="min-h-screen font-heb" style={{ background: "#FAF9F6" }}>
+    <div className="min-h-screen font-heb" style={{ background: "#0B0A08" }}>
       <div className="nf-scroll overflow-y-auto">
         <TopBar />
         <Greeting />
