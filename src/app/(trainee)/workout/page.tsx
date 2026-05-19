@@ -9,6 +9,9 @@ type PlanExercise = {
   sets: number;
   reps: number;
   rest_seconds: number;
+  weight_kg: number | null;
+  youtube_url: string | null;
+  notes: string | null;
   order_index: number;
 };
 
@@ -96,7 +99,7 @@ export default function WorkoutPage() {
       daysData.map(async (day) => {
         const { data: exData } = await supabase
           .from("plan_exercises")
-          .select("name, sets, reps, rest_seconds, order_index")
+          .select("name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
           .eq("day_id", day.id)
           .order("order_index");
         return { ...day, exercises: exData ?? [] };
@@ -234,45 +237,55 @@ export default function WorkoutPage() {
               </div>
             ) : (
               currentDay.exercises.map((ex, exIdx) => (
-                <button
-                  key={exIdx}
-                  className="tap w-full rounded-2xl p-4 flex items-center gap-4 text-right"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
-                  }}
-                >
-                  {/* Number */}
-                  <div
-                    className="w-9 h-9 rounded-xl grid place-items-center text-[13px] font-bold flex-shrink-0"
-                    style={{ background: "rgba(225,29,42,0.10)", color: "#E11D2A" }}
-                  >
-                    {exIdx + 1}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[14px] truncate">{ex.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className="flex items-center gap-1 text-[11px]"
-                        style={{ color: "rgba(255,255,255,0.50)" }}
-                      >
-                        <DumbbellIcon className="w-3 h-3" />
-                        {ex.sets} × {ex.reps}
-                      </span>
-                      <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.20)" }} />
-                      <span
-                        className="flex items-center gap-1 text-[11px]"
-                        style={{ color: "rgba(255,255,255,0.50)" }}
-                      >
-                        <TimerIcon className="w-3 h-3" />
-                        {ex.rest_seconds}שנ׳
-                      </span>
+                <div key={exIdx} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
+                  <div className="tap p-4 flex items-center gap-4 text-right w-full">
+                    {/* Number */}
+                    <div
+                      className="w-9 h-9 rounded-xl grid place-items-center text-[13px] font-bold flex-shrink-0"
+                      style={{ background: "rgba(225,29,42,0.10)", color: "#E11D2A" }}
+                    >
+                      {exIdx + 1}
                     </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[14px] truncate">{ex.name}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="flex items-center gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.50)" }}>
+                          <DumbbellIcon className="w-3 h-3" />
+                          {ex.sets} × {ex.reps}
+                        </span>
+                        <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.20)" }} />
+                        <span className="flex items-center gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.50)" }}>
+                          <TimerIcon className="w-3 h-3" />
+                          {ex.rest_seconds}שנ׳
+                        </span>
+                        {ex.weight_kg ? (
+                          <>
+                            <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.20)" }} />
+                            <span className="text-[11px]" style={{ color: "rgba(225,29,42,0.80)" }}>{ex.weight_kg}ק״ג</span>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <ChevLeftIcon className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
                   </div>
 
-                  <ChevLeftIcon className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
-                </button>
+                  {(ex.notes || ex.youtube_url) && (
+                    <div className="px-4 pb-3 space-y-1 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                      {ex.notes && (
+                        <p className="text-[11px] leading-relaxed pt-2" style={{ color: "rgba(255,255,255,0.38)" }}>{ex.notes}</p>
+                      )}
+                      {ex.youtube_url && (
+                        <a href={ex.youtube_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-[11px] pt-1" style={{ color: "rgba(255,100,100,0.75)" }}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.3v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.7 12 21.7 12 21.7s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
+                          סרטון הסבר
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))
             )}
           </div>
