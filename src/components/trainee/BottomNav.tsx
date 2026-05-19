@@ -50,32 +50,20 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // Light glass on home (light bg), dark glass on other screens
-  const isLightScreen = pathname === "/home";
-
-  const navBg = isLightScreen
-    ? "rgba(255,255,255,0.86)"
-    : "rgba(21,20,15,0.82)";
-  const navShadow = isLightScreen
-    ? "0 0 0 1px rgba(0,0,0,0.05), 0 12px 30px rgba(10,10,12,0.10)"
-    : "inset 0 0 0 1px rgba(255,255,255,0.06), 0 12px 30px rgba(0,0,0,0.5)";
-
   return (
     <div className="fixed bottom-0 left-0 right-0 pb-[26px] px-4 pt-3 z-50 pointer-events-none">
       <nav
         className="pointer-events-auto rounded-[28px] flex items-center justify-between px-2 py-2"
         style={{
-          background: navBg,
+          background: "rgba(15,14,10,0.88)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
-          boxShadow: navShadow,
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07), 0 12px 30px rgba(0,0,0,0.55)",
         }}
       >
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const active = pathname === href;
-          const color = isLightScreen
-            ? active ? "#0A0A0C" : "#9A9AA3"
-            : active ? "#ffffff" : "rgba(255,255,255,0.40)";
+          const color = active ? "#ffffff" : "rgba(255,255,255,0.38)";
 
           return (
             <Link key={href} href={href} className="tap relative flex-1 h-12 grid place-items-center rounded-2xl">
