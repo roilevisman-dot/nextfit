@@ -17,6 +17,7 @@ type PlanExercise = {
   sets: number;
   reps: number;
   rest_seconds: number;
+  weight_kg: number;
   order_index: number;
 };
 
@@ -126,7 +127,7 @@ export default function ClientWorkoutPage() {
               ...d,
               exercises: [
                 ...d.exercises,
-                { exercise_id: ex.id, name: ex.name, sets: 3, reps: 12, rest_seconds: 60, order_index: d.exercises.length },
+                { exercise_id: ex.id, name: ex.name, sets: 3, reps: 12, rest_seconds: 60, weight_kg: 0, order_index: d.exercises.length },
               ],
             }
           : d
@@ -143,7 +144,7 @@ export default function ClientWorkoutPage() {
     );
   };
 
-  const updateExercise = (exIdx: number, field: "sets" | "reps" | "rest_seconds", value: number) => {
+  const updateExercise = (exIdx: number, field: "sets" | "reps" | "rest_seconds" | "weight_kg", value: number) => {
     setDays((prev) =>
       prev.map((d, i) =>
         i === activeDay
@@ -186,6 +187,7 @@ export default function ClientWorkoutPage() {
             sets: e.sets,
             reps: e.reps,
             rest_seconds: e.rest_seconds,
+            weight_kg: e.weight_kg || null,
             order_index: idx,
           }))
         );
@@ -294,25 +296,27 @@ export default function ClientWorkoutPage() {
                       <TrashIcon className="w-3.5 h-3.5" style={{ color: "#E11D2A" }} />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: "סטים", field: "sets" as const, value: ex.sets },
-                      { label: "חזרות", field: "reps" as const, value: ex.reps },
-                      { label: "מנוחה (שנ׳)", field: "rest_seconds" as const, value: ex.rest_seconds },
-                    ].map(({ label, field, value }) => (
+                      { label: "משקל (ק״ג)", field: "weight_kg" as const, value: ex.weight_kg, step: 2.5, min: 0 },
+                      { label: "סטים", field: "sets" as const, value: ex.sets, step: 1, min: 1 },
+                      { label: "חזרות", field: "reps" as const, value: ex.reps, step: 1, min: 1 },
+                      { label: "מנוחה (שנ׳)", field: "rest_seconds" as const, value: ex.rest_seconds, step: 15, min: 0 },
+                    ].map(({ label, field, value, step, min }) => (
                       <div key={field} className="flex flex-col items-center gap-1.5 rounded-xl p-2.5"
-                        style={{ background: "rgba(255,255,255,0.05)" }}>
+                        style={{ background: field === "weight_kg" ? "rgba(225,29,42,0.07)" : "rgba(255,255,255,0.05)",
+                          boxShadow: field === "weight_kg" ? "inset 0 0 0 1px rgba(225,29,42,0.18)" : "none" }}>
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => updateExercise(exIdx, field, Math.max(1, value - (field === "rest_seconds" ? 15 : 1)))}
+                            onClick={() => updateExercise(exIdx, field, Math.max(min, value - step))}
                             className="tap w-6 h-6 rounded-lg text-[16px] font-bold grid place-items-center"
                             style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.55)" }}
                           >
                             −
                           </button>
-                          <span className="text-[15px] font-bold w-6 text-center">{value}</span>
+                          <span className="text-[15px] font-bold w-8 text-center">{value || 0}</span>
                           <button
-                            onClick={() => updateExercise(exIdx, field, value + (field === "rest_seconds" ? 15 : 1))}
+                            onClick={() => updateExercise(exIdx, field, value + step)}
                             className="tap w-6 h-6 rounded-lg text-[16px] font-bold grid place-items-center"
                             style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.55)" }}
                           >
