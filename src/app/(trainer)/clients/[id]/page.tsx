@@ -63,6 +63,9 @@ function ChartIcon(props: React.SVGProps<SVGSVGElement>) {
 function PenIcon(props: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
 }
+function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>;
+}
 
 const INP_STYLE = { background: "rgba(255,255,255,0.07)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)", caretColor: "#E11D2A" } as const;
 const INP_CLASS = "w-full h-11 rounded-xl px-3 text-white text-[14px] outline-none";
@@ -182,6 +185,7 @@ export default function ClientDetailPage() {
   const sections = [
     { label: "תוכנית אימון", sub: "ניהול ימים ותרגילים", Icon: DumbbellIcon, href: `/clients/${clientId}/workout` },
     { label: "תפריט תזונה", sub: "ארוחות ומזונות", Icon: PlateIcon, href: `/clients/${clientId}/nutrition` },
+    { label: "מעקב תזונה יומי", sub: "מה המתאמן אכל היום", Icon: EyeIcon, href: `/clients/${clientId}/nutrition/daily` },
     { label: "מעקב התקדמות", sub: "גרף משקל ומדדים", Icon: ChartIcon, href: `/clients/${clientId}/progress` },
   ];
 

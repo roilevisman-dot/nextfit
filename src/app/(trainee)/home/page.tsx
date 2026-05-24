@@ -56,16 +56,18 @@ export default function HomePage() {
   const [water, setWater] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const key = `nf_water_${new Date().toISOString().split("T")[0]}`;
-    const saved = localStorage.getItem(key);
-    if (saved) setWater(parseFloat(saved));
-  }, []);
-
   const addWater = () => {
     const next = Math.min(WATER_GOAL, parseFloat((water + 0.25).toFixed(2)));
     setWater(next);
-    localStorage.setItem(`nf_water_${new Date().toISOString().split("T")[0]}`, next.toString());
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem(`nf_water_${today}`, next.toString());
+    const cid = localStorage.getItem("nextfit_client_id");
+    if (cid) {
+      supabase.from("daily_water_logs").upsert(
+        { client_id: cid, log_date: today, water_liters: next },
+        { onConflict: "client_id,log_date" }
+      );
+    }
   };
 
   useEffect(() => {
@@ -75,6 +77,16 @@ export default function HomePage() {
     const today = new Date().toISOString().split("T")[0];
 
     const init = async () => {
+      // Water: DB first, fallback localStorage
+      const { data: waterLog } = await supabase.from("daily_water_logs")
+        .select("water_liters").eq("client_id", cid).eq("log_date", today).single();
+      if (waterLog) {
+        setWater(waterLog.water_liters);
+      } else {
+        const saved = localStorage.getItem(`nf_water_${today}`);
+        if (saved) setWater(parseFloat(saved));
+      }
+
       // Client basics
       const { data: cd } = await supabase.from("clients")
         .select("name, current_weight")
