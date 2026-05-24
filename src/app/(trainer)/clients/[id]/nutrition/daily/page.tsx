@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -10,12 +10,10 @@ type MealItem = {
   calories: number | null;
 };
 
-type AltItem = MealItem;
-
 type MealLog = {
   meal_id: string;
   alternative_id: string | null;
-  altItems?: AltItem[];
+  altItems?: MealItem[];
 };
 
 type Meal = {
@@ -37,6 +35,9 @@ function DropIcon(p: React.SVGProps<SVGSVGElement>) {
 function UtensilsIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>;
 }
+function PulseIcon(p: React.SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="currentColor" {...p}><circle cx="12" cy="12" r="4" /></svg>;
+}
 
 const ACCENT = "#E11D2A";
 const WATER_GOAL = 2.5;
@@ -54,6 +55,7 @@ export default function NutritionDailyPage() {
   const [water, setWater] = useState<number | null>(null);
   const [totalCaloriesTarget, setTotalCaloriesTarget] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveFlash, setLiveFlash] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const todayLabel = (() => {
@@ -61,12 +63,45 @@ export default function NutritionDailyPage() {
     return `${d.getDate()} ב${HEB_MONTHS[d.getMonth()]}`;
   })();
 
+  const mealIdsRef = useRef<string[]>([]);
+
+  // Reload only the live data (logs + water) — called on mount and on realtime events
+  const reloadLive = useCallback(async () => {
+    const mealIds = mealIdsRef.current;
+    if (mealIds.length === 0) return;
+
+    const [{ data: logsData }, { data: waterLog }] = await Promise.all([
+      supabase.from("meal_logs")
+        .select("meal_id, alternative_id")
+        .eq("client_id", clientId).eq("log_date", today)
+        .in("meal_id", mealIds),
+      supabase.from("daily_water_logs")
+        .select("water_liters")
+        .eq("client_id", clientId).eq("log_date", today)
+        .single(),
+    ]);
+
+    if (waterLog) setWater(waterLog.water_liters);
+
+    const enriched: MealLog[] = await Promise.all(
+      (logsData ?? []).map(async (log) => {
+        if (!log.alternative_id) return { ...log, altItems: undefined };
+        const { data: altItems } = await supabase.from("meal_alternative_items")
+          .select("food_name, amount, calories")
+          .eq("alternative_id", log.alternative_id)
+          .order("order_index");
+        return { ...log, altItems: altItems ?? [] };
+      })
+    );
+    setLogs(enriched);
+  }, [clientId, today, supabase]);
+
+  // Initial full load
   useEffect(() => {
     const init = async () => {
       const { data: cd } = await supabase.from("clients").select("name").eq("id", clientId).single();
       if (cd) setClientName(cd.name);
 
-      // Active plan
       const { data: cmpRows } = await supabase.from("client_meal_plans")
         .select("meal_plan_id")
         .eq("client_id", clientId).eq("active", true)
@@ -84,7 +119,6 @@ export default function NutritionDailyPage() {
         .order("order_index");
       if (!mealsData) { setLoading(false); return; }
 
-      // Load meal items
       const loadedMeals: Meal[] = await Promise.all(
         mealsData.map(async (m) => {
           const { data: items } = await supabase.from("meal_items")
@@ -94,37 +128,40 @@ export default function NutritionDailyPage() {
         })
       );
       setMeals(loadedMeals);
+      mealIdsRef.current = mealsData.map((m) => m.id);
 
-      // Load today's logs
-      const mealIds = mealsData.map((m) => m.id);
-      const [{ data: logsData }, { data: waterLog }] = await Promise.all([
-        supabase.from("meal_logs")
-          .select("meal_id, alternative_id")
-          .eq("client_id", clientId).eq("log_date", today)
-          .in("meal_id", mealIds),
-        supabase.from("daily_water_logs")
-          .select("water_liters")
-          .eq("client_id", clientId).eq("log_date", today)
-          .single(),
-      ]);
-
-      if (waterLog) setWater(waterLog.water_liters);
-
-      // Load alternative items for logs that used an alternative
-      const enrichedLogs: MealLog[] = await Promise.all(
-        (logsData ?? []).map(async (log) => {
-          if (!log.alternative_id) return { ...log, altItems: undefined };
-          const { data: altItems } = await supabase.from("meal_alternative_items")
-            .select("food_name, amount, calories")
-            .eq("alternative_id", log.alternative_id)
-            .order("order_index");
-          return { ...log, altItems: altItems ?? [] };
-        })
-      );
-      setLogs(enrichedLogs);
+      await reloadLive();
       setLoading(false);
     };
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
+
+  // Realtime subscription for meal_logs + daily_water_logs
+  useEffect(() => {
+    const channel = supabase
+      .channel(`trainer-monitor-${clientId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meal_logs", filter: `client_id=eq.${clientId}` },
+        () => {
+          reloadLive();
+          setLiveFlash(true);
+          setTimeout(() => setLiveFlash(false), 1200);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_water_logs", filter: `client_id=eq.${clientId}` },
+        () => {
+          reloadLive();
+          setLiveFlash(true);
+          setTimeout(() => setLiveFlash(false), 1200);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
@@ -162,7 +199,24 @@ export default function NutritionDailyPage() {
         {/* Header */}
         <div className="rise" style={{ animationDelay: "40ms" }}>
           <div className="text-[10.5px] tracking-[0.34em] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>מעקב תזונה</div>
-          <h1 className="mt-1 text-[24px] font-extrabold">{clientName}</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <h1 className="text-[24px] font-extrabold">{clientName}</h1>
+            {/* Live indicator */}
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+              style={{
+                background: liveFlash ? "rgba(16,185,129,0.20)" : "rgba(255,255,255,0.06)",
+                boxShadow: liveFlash ? "inset 0 0 0 1px rgba(16,185,129,0.35)" : "inset 0 0 0 1px rgba(255,255,255,0.10)",
+                transition: "all 400ms ease",
+              }}>
+              <PulseIcon
+                className="w-1.5 h-1.5"
+                style={{ color: liveFlash ? "#10B981" : "#10B981", opacity: liveFlash ? 1 : 0.6 }}
+              />
+              <span className="text-[9.5px] font-medium" style={{ color: liveFlash ? "#10B981" : "rgba(255,255,255,0.40)" }}>
+                עדכון חי
+              </span>
+            </div>
+          </div>
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-medium mt-1"
             style={{ background: "rgba(225,29,42,0.12)", color: "#FF8A95", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)" }}>
             {todayLabel}
@@ -220,7 +274,7 @@ export default function NutritionDailyPage() {
             </div>
           </div>
 
-          {/* Meal count */}
+          {/* Meal progress dots */}
           <div className="mt-3 flex items-center gap-2">
             <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.40)" }}>
               {logs.length} מתוך {meals.length} ארוחות הושלמו
@@ -230,7 +284,7 @@ export default function NutritionDailyPage() {
                 const done = logs.some((l) => l.meal_id === m.id);
                 return (
                   <div key={m.id} className="w-2 h-2 rounded-full"
-                    style={{ background: done ? "#10B981" : "rgba(255,255,255,0.12)" }} />
+                    style={{ background: done ? "#10B981" : "rgba(255,255,255,0.12)", transition: "background 400ms" }} />
                 );
               })}
             </div>
@@ -255,8 +309,9 @@ export default function NutritionDailyPage() {
                     boxShadow: isDone
                       ? "inset 0 0 0 1px rgba(16,185,129,0.18)"
                       : "inset 0 0 0 1px rgba(255,255,255,0.06)",
+                    transition: "background 400ms, box-shadow 400ms",
                   }}>
-                  {/* Status dot */}
+                  {/* Status icon */}
                   <div className="w-12 flex-shrink-0 grid place-items-center">
                     {isDone ? (
                       <div className="w-7 h-7 rounded-full grid place-items-center"
