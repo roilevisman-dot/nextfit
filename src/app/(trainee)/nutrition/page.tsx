@@ -15,7 +15,6 @@ type Alternative = { id: string; option_number: 1 | 2 | 3; items: MealItem[] };
 type Meal = { id: string; name: string; time_window: string | null; items: MealItem[]; alternatives: Alternative[] };
 type Plan = { name: string; total_calories: number | null; meals: Meal[] };
 
-// ─── Icons ───
 function CheckIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="20 6 9 17 4 12" /></svg>;
 }
@@ -39,9 +38,6 @@ function MoonIcon(p: React.SVGProps<SVGSVGElement>) {
 }
 function UtensilsIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>;
-}
-function RefreshIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>;
 }
 function DropIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></svg>;
@@ -67,7 +63,7 @@ export default function NutritionPage() {
   const [done, setDone] = useState<boolean[]>([]);
   const [selectedAlts, setSelectedAlts] = useState<(string | null)[]>([]);
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
-  const [altSheetIndex, setAltSheetIndex] = useState<number | null>(null);
+  const [detailTabId, setDetailTabId] = useState<string | null>(null);
   const [water, setWater] = useState(0);
 
   const today = new Date().toISOString().split("T")[0];
@@ -130,6 +126,11 @@ export default function NutritionPage() {
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 
+  const openDetail = (i: number) => {
+    setDetailIndex(i);
+    setDetailTabId(selectedAlts[i]);
+  };
+
   const toggleDone = async (i: number) => {
     const clientId = localStorage.getItem("nextfit_client_id");
     if (!clientId || !plan) return;
@@ -146,14 +147,15 @@ export default function NutritionPage() {
     }
   };
 
-  const selectAlt = async (mealIndex: number, altId: string | null) => {
-    const clientId = localStorage.getItem("nextfit_client_id");
-    if (!clientId || !plan) return;
-    const newAlts = selectedAlts.map((v, j) => (j === mealIndex ? altId : v));
+  const switchTab = async (altId: string | null) => {
+    if (detailIndex === null || !plan) return;
+    setDetailTabId(altId);
+    const newAlts = selectedAlts.map((v, j) => (j === detailIndex ? altId : v));
     setSelectedAlts(newAlts);
-    setAltSheetIndex(null);
-    if (done[mealIndex]) {
-      const meal = plan.meals[mealIndex];
+    if (done[detailIndex]) {
+      const clientId = localStorage.getItem("nextfit_client_id");
+      if (!clientId) return;
+      const meal = plan.meals[detailIndex];
       await supabase.from("meal_logs").upsert(
         { client_id: clientId, meal_id: meal.id, log_date: today, completed_at: new Date().toISOString(), alternative_id: altId },
         { onConflict: "client_id,meal_id,log_date" }
@@ -174,7 +176,6 @@ export default function NutritionPage() {
     }
   };
 
-  // ─── Derived ───
   const consumedCalories = plan?.meals.reduce((acc, meal, idx) => {
     if (!done[idx]) return acc;
     const activeItems = selectedAlts[idx]
@@ -210,10 +211,10 @@ export default function NutritionPage() {
     );
   }
 
-  // Detail meal data
+  // Detail sheet derived data
   const detailMeal = detailIndex !== null ? plan.meals[detailIndex] : null;
-  const detailAlt = detailIndex !== null && selectedAlts[detailIndex]
-    ? detailMeal?.alternatives.find((a) => a.id === selectedAlts[detailIndex]) ?? null
+  const detailAlt = detailTabId !== null
+    ? detailMeal?.alternatives.find((a) => a.id === detailTabId) ?? null
     : null;
   const detailItems = detailAlt ? detailAlt.items : (detailMeal?.items ?? []);
   const detailCal = detailItems.reduce((a, it) => a + (it.calories ?? 0), 0);
@@ -298,7 +299,7 @@ export default function NutritionPage() {
             const isDone = done[i];
 
             return (
-              <button key={meal.id} onClick={() => setDetailIndex(i)}
+              <button key={meal.id} onClick={() => openDetail(i)}
                 className="tap w-full rounded-3xl p-4 flex items-center gap-4 text-right"
                 style={{
                   background: isDone ? "rgba(225,29,42,0.07)" : "rgba(255,255,255,0.04)",
@@ -315,7 +316,7 @@ export default function NutritionPage() {
                   }}>
                   {isDone
                     ? <CheckIcon className="w-7 h-7" style={{ color: ACCENT }} />
-                    : getMealIcon(meal.name, "w-6 h-6", isDone ? ACCENT : "rgba(255,255,255,0.55)")}
+                    : getMealIcon(meal.name, "w-6 h-6", "rgba(255,255,255,0.55)")}
                 </div>
 
                 {/* Content */}
@@ -324,7 +325,12 @@ export default function NutritionPage() {
                     <p className="font-bold text-[15px]" style={{ color: isDone ? "#FAF9F6" : "rgba(255,255,255,0.75)" }}>{meal.name}</p>
                     {selectedAlt && (
                       <span className="text-[9.5px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(225,29,42,0.15)", color: "#FF8A95" }}>
-                        חלופה {selectedAlt.option_number}
+                        אופציה {selectedAlt.option_number}
+                      </span>
+                    )}
+                    {!selectedAlt && meal.alternatives.length > 0 && (
+                      <span className="text-[9.5px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)" }}>
+                        {meal.alternatives.length} אופציות
                       </span>
                     )}
                   </div>
@@ -356,7 +362,7 @@ export default function NutritionPage() {
             onClick={(e) => e.stopPropagation()}>
 
             {/* Handle + header */}
-            <div className="px-5 pt-4 pb-4 flex-shrink-0">
+            <div className="px-5 pt-4 pb-3 flex-shrink-0">
               <div className="w-8 h-1 rounded-full mx-auto mb-5" style={{ background: "rgba(255,255,255,0.15)" }} />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -375,19 +381,39 @@ export default function NutritionPage() {
                   <XIcon className="w-4 h-4" style={{ color: "rgba(255,255,255,0.50)" }} />
                 </button>
               </div>
-
-              {/* Selected alt badge */}
-              {detailAlt && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[11px] px-2.5 py-1 rounded-full" style={{ background: "rgba(225,29,42,0.15)", color: "#FF8A95" }}>
-                    חלופה {detailAlt.option_number} פעילה
-                  </span>
-                  <button onClick={() => selectAlt(detailIndex, null)} className="tap text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    חזור למקורי
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Option tabs — shown only when alternatives exist */}
+            {detailMeal.alternatives.length > 0 && (
+              <div className="px-5 pb-3 flex-shrink-0">
+                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  {/* מקורי tab */}
+                  <button
+                    onClick={() => switchTab(null)}
+                    className="tap flex-shrink-0 px-4 py-2 rounded-full text-[12px] font-semibold transition-all"
+                    style={{
+                      background: detailTabId === null ? ACCENT : "rgba(255,255,255,0.07)",
+                      color: detailTabId === null ? "#fff" : "rgba(255,255,255,0.50)",
+                      boxShadow: detailTabId === null ? "0 4px 12px rgba(225,29,42,0.30)" : "none",
+                    }}>
+                    מקורי
+                  </button>
+                  {detailMeal.alternatives.map((alt) => (
+                    <button
+                      key={alt.id}
+                      onClick={() => switchTab(alt.id)}
+                      className="tap flex-shrink-0 px-4 py-2 rounded-full text-[12px] font-semibold transition-all"
+                      style={{
+                        background: detailTabId === alt.id ? ACCENT : "rgba(255,255,255,0.07)",
+                        color: detailTabId === alt.id ? "#fff" : "rgba(255,255,255,0.50)",
+                        boxShadow: detailTabId === alt.id ? "0 4px 12px rgba(225,29,42,0.30)" : "none",
+                      }}>
+                      אופציה {alt.option_number}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Macros bar */}
             <div className="mx-5 mb-4 rounded-2xl p-3 flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -434,15 +460,7 @@ export default function NutritionPage() {
             </div>
 
             {/* Actions */}
-            <div className="px-5 pb-10 pt-3 flex-shrink-0 space-y-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              {detailMeal.alternatives.length > 0 && (
-                <button onClick={() => { setAltSheetIndex(detailIndex); setDetailIndex(null); }}
-                  className="tap w-full h-12 rounded-2xl flex items-center justify-center gap-2 font-semibold text-[14px]"
-                  style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.75)" }}>
-                  <RefreshIcon className="w-4 h-4" />
-                  החלף ארוחה
-                </button>
-              )}
+            <div className="px-5 pb-10 pt-3 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <button onClick={() => { toggleDone(detailIndex); setDetailIndex(null); }}
                 className="tap w-full h-13 rounded-2xl flex items-center justify-center gap-2 font-bold text-[15px] text-white"
                 style={{
@@ -455,75 +473,6 @@ export default function NutritionPage() {
                   <><CheckIcon className="w-5 h-5" />סמן כהושלם</>
                 )}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Alternative Sheet ─── */}
-      {altSheetIndex !== null && plan && (
-        <div className="fixed inset-0 z-50 flex items-end"
-          style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(14px)" }}
-          onClick={() => setAltSheetIndex(null)}>
-          <div className="w-full rounded-t-3xl pb-10 font-heb"
-            style={{ background: "#111009", boxShadow: "0 -1px 0 rgba(255,255,255,0.08)", maxHeight: "80vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 pt-4 pb-3 sticky top-0" style={{ background: "#111009" }}>
-              <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
-              <div className="flex items-center justify-between">
-                <h3 className="text-[17px] font-bold" style={{ color: "#FAF9F6" }}>החלף: {plan.meals[altSheetIndex].name}</h3>
-                <button onClick={() => setAltSheetIndex(null)} className="tap w-8 h-8 rounded-full grid place-items-center"
-                  style={{ background: "rgba(255,255,255,0.07)" }}>
-                  <XIcon className="w-4 h-4" style={{ color: "rgba(255,255,255,0.50)" }} />
-                </button>
-              </div>
-            </div>
-            <div className="px-5 space-y-2.5 pb-4">
-              {/* Default */}
-              <button onClick={() => selectAlt(altSheetIndex, null)} className="tap w-full rounded-2xl p-4 text-right"
-                style={{
-                  background: selectedAlts[altSheetIndex] === null ? "rgba(225,29,42,0.10)" : "rgba(255,255,255,0.04)",
-                  boxShadow: selectedAlts[altSheetIndex] === null ? "inset 0 0 0 1.5px rgba(225,29,42,0.30)" : "inset 0 0 0 1px rgba(255,255,255,0.07)",
-                }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[13px] font-bold" style={{ color: "#FAF9F6" }}>מקורי</span>
-                  {selectedAlts[altSheetIndex] === null && <CheckIcon className="w-4 h-4" style={{ color: ACCENT }} />}
-                </div>
-                {plan.meals[altSheetIndex].items.length > 0 && (
-                  <>
-                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>
-                      {plan.meals[altSheetIndex].items.map((it) => it.food_name).join(" · ")}
-                    </p>
-                    <p className="text-[11px] mt-1 font-semibold" style={{ color: ACCENT }}>
-                      {plan.meals[altSheetIndex].items.reduce((s, it) => s + (it.calories ?? 0), 0)} קק״ל
-                    </p>
-                  </>
-                )}
-              </button>
-
-              {/* Alternatives */}
-              {plan.meals[altSheetIndex].alternatives.map((alt) => {
-                const altCal = alt.items.reduce((s, it) => s + (it.calories ?? 0), 0);
-                const isSelected = selectedAlts[altSheetIndex] === alt.id;
-                return (
-                  <button key={alt.id} onClick={() => selectAlt(altSheetIndex, alt.id)} className="tap w-full rounded-2xl p-4 text-right"
-                    style={{
-                      background: isSelected ? "rgba(225,29,42,0.10)" : "rgba(255,255,255,0.04)",
-                      boxShadow: isSelected ? "inset 0 0 0 1.5px rgba(225,29,42,0.30)" : "inset 0 0 0 1px rgba(255,255,255,0.07)",
-                    }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-bold" style={{ color: "#FAF9F6" }}>חלופה {alt.option_number}</span>
-                      {isSelected && <CheckIcon className="w-4 h-4" style={{ color: ACCENT }} />}
-                    </div>
-                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.40)" }}>
-                      {alt.items.map((it) => it.food_name).join(" · ")}
-                    </p>
-                    {altCal > 0 && (
-                      <p className="text-[11px] mt-1 font-semibold" style={{ color: ACCENT }}>{altCal} קק״ל</p>
-                    )}
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
