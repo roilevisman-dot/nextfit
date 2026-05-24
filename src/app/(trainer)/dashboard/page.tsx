@@ -58,9 +58,9 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Trainer name from coaches table
-      const { data: coachRow } = await supabase.from("coaches").select("name").eq("id", user.id).single();
-      if (coachRow?.name) setTrainerName(coachRow.name.split(" ")[0]);
+      // Trainer name from auth metadata
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "מאמן";
+      setTrainerName(name.split(" ")[0]);
 
       // All active clients
       const { data: clientsData } = await supabase.from("clients")
