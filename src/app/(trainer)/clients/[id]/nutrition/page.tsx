@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { FOOD_DATABASE, searchFoods, calcMacros, type FoodEntry } from "@/lib/food-library";
+import { searchFoods, calcMacros, type FoodEntry } from "@/lib/food-library";
 
 // ─── Types ───
 type FoodItem = {
@@ -494,7 +494,7 @@ export default function ClientNutritionPage() {
       await supabase.from("client_meal_plans").insert({ client_id: clientId, meal_plan_id: planId, active: true });
 
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setTimeout(() => router.push(`/clients/${clientId}`), 1000);
     } catch (err) {
       console.error("Save error:", err);
       alert(`שגיאה בשמירה: ${err instanceof Error ? err.message : String(err)}`);
