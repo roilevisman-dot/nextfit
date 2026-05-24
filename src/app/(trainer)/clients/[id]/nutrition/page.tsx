@@ -415,27 +415,43 @@ export default function ClientNutritionPage() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { alert("לא מחובר"); setSaving(false); return; }
 
       const totalCalories = meals.reduce((acc, m) =>
         acc + m.items.reduce((a, i) => a + i.calories, 0), 0);
 
-      const { data: plan } = await supabase.from("meal_plans")
-        .upsert({ coach_id: user.id, name: `תפריט ${clientName}`, total_calories: Math.round(totalCalories) })
-        .select().single();
-      if (!plan) throw new Error("no plan");
+      // Get or create meal plan
+      const { data: existingCmp } = await supabase.from("client_meal_plans")
+        .select("meal_plan_id")
+        .eq("client_id", clientId).eq("active", true)
+        .order("id", { ascending: false }).limit(1).maybeSingle();
+
+      let planId: string;
+
+      if (existingCmp?.meal_plan_id) {
+        planId = existingCmp.meal_plan_id;
+        await supabase.from("meal_plans")
+          .update({ name: `תפריט ${clientName}`, total_calories: Math.round(totalCalories) })
+          .eq("id", planId);
+      } else {
+        const { data: newPlan, error: planErr } = await supabase.from("meal_plans")
+          .insert({ coach_id: user.id, name: `תפריט ${clientName}`, total_calories: Math.round(totalCalories) })
+          .select().single();
+        if (planErr || !newPlan) throw new Error(planErr?.message ?? "no plan");
+        planId = newPlan.id;
+      }
 
       // Delete old meals (cascades to items + alternatives)
-      await supabase.from("meals").delete().eq("plan_id", plan.id);
+      await supabase.from("meals").delete().eq("plan_id", planId);
 
       for (const [mi, meal] of meals.entries()) {
         const hasContent = meal.items.length > 0 || meal.alternatives.some((a) => a.items.length > 0);
         if (!hasContent) continue;
 
-        const { data: mealRow } = await supabase.from("meals")
-          .insert({ plan_id: plan.id, name: meal.label, time_window: meal.time, order_index: mi })
+        const { data: mealRow, error: mealErr } = await supabase.from("meals")
+          .insert({ plan_id: planId, name: meal.label, time_window: meal.time, order_index: mi })
           .select().single();
-        if (!mealRow) continue;
+        if (mealErr || !mealRow) continue;
 
         if (meal.items.length > 0) {
           await supabase.from("meal_items").insert(
@@ -473,12 +489,16 @@ export default function ClientNutritionPage() {
         }
       }
 
-      await supabase.from("client_meal_plans")
-        .upsert({ client_id: clientId, meal_plan_id: plan.id, active: true }, { onConflict: "client_id,meal_plan_id" });
+      // Link plan to client — delete old links then insert fresh
+      await supabase.from("client_meal_plans").delete().eq("client_id", clientId);
+      await supabase.from("client_meal_plans").insert({ client_id: clientId, meal_plan_id: planId, active: true });
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("Save error:", err);
+      alert(`שגיאה בשמירה: ${err instanceof Error ? err.message : String(err)}`);
+    }
     setSaving(false);
   };
 
