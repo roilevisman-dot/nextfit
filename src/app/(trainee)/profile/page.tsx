@@ -24,12 +24,6 @@ function getInitials(name: string) {
   return name.trim().split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-function BellIcon(props: React.SVGProps<SVGSVGElement>) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
-}
-function ChevRightIcon(props: React.SVGProps<SVGSVGElement>) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m9 6 6 6-6 6" /></svg>;
-}
 function LogOutIcon(props: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 }
@@ -44,7 +38,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const cid = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!cid) { setLoading(false); return; }
+    if (!cid) { window.location.href = "/join"; return; }
     supabase
       .from("clients")
       .select("name, created_at, current_weight, goal_weight, age, phone, email, height_cm, goal, chest_cm, waist_cm, hips_cm, arm_cm, thigh_cm")
@@ -157,23 +151,6 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
-
-        {/* Settings */}
-        <div
-          className="rounded-2xl overflow-hidden rise"
-          style={{ animationDelay: "140ms", background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}
-        >
-          <button className="tap w-full flex items-center gap-3 px-4 py-4">
-            <div className="w-8 h-8 rounded-xl grid place-items-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.07)" }}>
-              <BellIcon className="w-4 h-4 text-white/60" />
-            </div>
-            <div className="flex-1 text-right">
-              <p className="text-[13.5px] font-medium">התראות</p>
-              <p className="text-[11px] text-white/40">נהל התראות</p>
-            </div>
-            <ChevRightIcon className="w-4 h-4 text-white/25 flex-shrink-0" />
-          </button>
-        </div>
 
         {/* Logout */}
         <button

@@ -91,7 +91,9 @@ export default function ClientWorkoutPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const numDaysChangedByUser = useRef(false);
+  const existingPlanHadDays = useRef(false);
 
   const supabase = createClient();
 
@@ -124,11 +126,20 @@ export default function ClientWorkoutPage() {
           setDurationWeeks(planData.duration_weeks ?? null);
           setNumDays(n);
 
-          const { data: wdays } = await supabase
+          const { data: wdays, error: wdaysError } = await supabase
             .from("workout_days")
             .select("id, day_number, label")
             .eq("plan_id", cp.plan_id)
             .order("day_number");
+
+          if (wdaysError) {
+            setLoadError("שגיאה בטעינת תוכנית האימון. נסה לרענן את הדף.");
+            setLoading(false);
+            return;
+          }
+          if (wdays && wdays.length > 0) {
+            existingPlanHadDays.current = true;
+          }
 
           const loadedDays: WorkoutDay[] = await Promise.all(
             Array.from({ length: n }, async (_, i) => {
@@ -202,6 +213,11 @@ export default function ClientWorkoutPage() {
   };
 
   const saveAll = async () => {
+    const hasAnyExercises = days.some((d) => d.exercises.length > 0);
+    if (!hasAnyExercises && existingPlanHadDays.current) {
+      alert("לא ניתן לשמור תוכנית ריקה. הוסף לפחות תרגיל אחד לפני השמירה.");
+      return;
+    }
     setSaving(true);
     setSaveError(false);
     try {
@@ -266,6 +282,17 @@ export default function ClientWorkoutPage() {
   };
 
   const library = groupFilter === "הכל" ? EXERCISE_LIBRARY : EXERCISE_LIBRARY.filter((e) => e.group === groupFilter);
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen font-heb flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: "#0B0A08", color: "#FAF9F6" }}>
+        <p className="text-[14px]" style={{ color: "#FF8A95" }}>{loadError}</p>
+        <button onClick={() => window.location.reload()} className="tap px-5 h-10 rounded-full text-[13px] font-medium text-white" style={{ background: "#E11D2A" }}>
+          רענן דף
+        </button>
+      </main>
+    );
+  }
 
   if (loading) {
     return (

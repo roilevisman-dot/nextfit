@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NFMark } from "@/components/NFMark";
 
@@ -73,10 +74,11 @@ export default function WorkoutPage() {
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
 
   const supabase = createClient();
+  const router = useRouter();
 
   const fetchPlan = useCallback(async () => {
     const cid = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!cid) { setLoading(false); return; }
+    if (!cid) { router.push("/join"); return; }
     setClientId(cid);
 
     const { data: cpRows } = await supabase
@@ -128,7 +130,8 @@ export default function WorkoutPage() {
     if (planData.created_at) setPlanStartDate(planData.created_at);
     setPlan({ ...planData, duration_weeks: planData.duration_weeks ?? null, days: daysWithExercises });
     setLoading(false);
-  }, [supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 

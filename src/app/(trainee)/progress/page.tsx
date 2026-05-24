@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type WeightEntry = { date: string; weight: number; logged_at: string };
@@ -29,6 +30,7 @@ function formatDate(iso: string) {
 
 export default function ProgressPage() {
   const supabase = createClient();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -41,7 +43,7 @@ export default function ProgressPage() {
 
   const fetchData = useCallback(async () => {
     const clientId = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!clientId) { setLoading(false); return; }
+    if (!clientId) { router.push("/join"); return; }
 
     const [{ data: cd }, { data: wlogs }] = await Promise.all([
       supabase.from("clients")
@@ -63,7 +65,8 @@ export default function ProgressPage() {
       })));
     }
     setLoading(false);
-  }, [supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

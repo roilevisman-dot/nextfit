@@ -118,6 +118,22 @@ export default function TrainerLoginPage() {
   const [message, setMessage] = useState("");
   const router = useRouter();
 
+  const handleForgotPassword = async () => {
+    if (!email) { setMessage("הזן כתובת אימייל קודם"); return; }
+    setLoading(true);
+    setMessage("");
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage("נשלח לך מייל לאיפוס סיסמה");
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = async () => {
     if (!email || !password) return;
     setLoading(true);
@@ -224,7 +240,7 @@ export default function TrainerLoginPage() {
             />
             {mode === "login" && (
               <div className="mt-2 flex justify-start">
-                <button className="text-[11.5px] text-white/70 hover:underline underline-offset-2">
+                <button onClick={handleForgotPassword} className="text-[11.5px] text-white/70 hover:underline underline-offset-2">
                   שכחתי סיסמה?
                 </button>
               </div>

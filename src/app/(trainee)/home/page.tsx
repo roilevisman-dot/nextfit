@@ -37,7 +37,7 @@ type Meal = { id: string; name: string; time_window: string | null; items: MealI
 type MealPlan = { name: string; total_calories: number | null; meals: Meal[] };
 type WeightLog = { weight: number; logged_at: string };
 
-const WATER_GOAL = 2.5;
+const WATER_GOAL = 4;
 const HEB_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 const HEB_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
@@ -72,7 +72,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const cid = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!cid) { setLoading(false); return; }
+    if (!cid) { router.push("/join"); return; }
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -168,14 +168,11 @@ export default function HomePage() {
 
         if (mpData) {
           setMealPlan({ name: mpData.name, total_calories: mpData.total_calories, meals: loadedMeals });
-          const saved = localStorage.getItem(`nf_meals_${cid}_${today}`);
-          if (saved) {
-            try {
-              const parsed: boolean[] = JSON.parse(saved);
-              setDoneMeals(parsed.length === loadedMeals.length ? parsed : new Array(loadedMeals.length).fill(false));
-            } catch {
-              setDoneMeals(new Array(loadedMeals.length).fill(false));
-            }
+          const mealIds = loadedMeals.map((m) => m.id);
+          if (mealIds.length > 0) {
+            const { data: logs } = await supabase.from("meal_logs")
+              .select("meal_id").eq("client_id", cid).eq("log_date", today).in("meal_id", mealIds);
+            setDoneMeals(loadedMeals.map((m) => !!(logs ?? []).find((l) => l.meal_id === m.id)));
           } else {
             setDoneMeals(new Array(loadedMeals.length).fill(false));
           }
@@ -188,11 +185,21 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleMeal = (i: number) => {
+  const toggleMeal = async (i: number) => {
     const cid = localStorage.getItem("nextfit_client_id");
+    if (!cid || !mealPlan) return;
+    const meal = mealPlan.meals[i];
+    const today = new Date().toISOString().split("T")[0];
     const next = doneMeals.map((v, j) => (j === i ? !v : v));
     setDoneMeals(next);
-    localStorage.setItem(`nf_meals_${cid}_${new Date().toISOString().split("T")[0]}`, JSON.stringify(next));
+    if (!doneMeals[i]) {
+      await supabase.from("meal_logs").upsert(
+        { client_id: cid, meal_id: meal.id, log_date: today, completed_at: new Date().toISOString(), alternative_id: null },
+        { onConflict: "client_id,meal_id,log_date" }
+      );
+    } else {
+      await supabase.from("meal_logs").delete().eq("client_id", cid).eq("meal_id", meal.id).eq("log_date", today);
+    }
   };
 
   // ─── Derived ───

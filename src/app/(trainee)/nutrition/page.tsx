@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type MealItem = {
@@ -49,11 +50,12 @@ function getMealIcon(name: string, size = "w-6 h-6", color = "#E11D2A") {
   return <UtensilsIcon {...props} />;
 }
 
-const WATER_GOAL = 2.5;
+const WATER_GOAL = 4;
 const ACCENT = "#E11D2A";
 
 export default function NutritionPage() {
   const supabase = createClient();
+  const router = useRouter();
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export default function NutritionPage() {
 
   const fetchPlan = useCallback(async () => {
     const clientId = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
-    if (!clientId) { setLoading(false); return; }
+    if (!clientId) { router.push("/join"); return; }
 
     const { data: waterLog } = await supabase.from("daily_water_logs")
       .select("water_liters").eq("client_id", clientId).eq("log_date", today).single();
@@ -79,7 +81,7 @@ export default function NutritionPage() {
 
     const { data: cmp } = await supabase.from("client_meal_plans")
       .select("meal_plan_id").eq("client_id", clientId).eq("active", true)
-      .order("id", { ascending: false }).limit(1).single();
+      .order("id", { ascending: false }).limit(1).maybeSingle();
     if (!cmp) { setLoading(false); return; }
 
     const [{ data: planData }, { data: mealsData }] = await Promise.all([
@@ -119,7 +121,7 @@ export default function NutritionPage() {
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today]);
+  }, [today, router]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 

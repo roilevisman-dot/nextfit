@@ -266,6 +266,8 @@ export default function ClientNutritionPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const existingPlanHadMeals = useRef(false);
 
   useEffect(() => {
     const init = async () => {
@@ -280,12 +282,19 @@ export default function ClientNutritionPage() {
       const cmp = cmpRows?.[0];
 
       if (cmp?.meal_plan_id) {
-        const { data: mealsData } = await supabase.from("meals")
+        const { data: mealsData, error: mealsError } = await supabase.from("meals")
           .select("id, name, time_window, order_index")
           .eq("plan_id", cmp.meal_plan_id)
           .order("order_index");
 
+        if (mealsError) {
+          setLoadError("שגיאה בטעינת התפריט. נסה לרענן את הדף.");
+          setLoading(false);
+          return;
+        }
+
         if (mealsData && mealsData.length > 0) {
+          existingPlanHadMeals.current = true;
           const loadedMeals: Meal[] = await Promise.all(
             mealsData.map(async (m) => {
               const { data: items } = await supabase.from("meal_items")
@@ -441,6 +450,16 @@ export default function ClientNutritionPage() {
         planId = newPlan.id;
       }
 
+      // Safety guard: never wipe an existing plan if current state has no content
+      const hasAnyContent = meals.some(
+        (m) => m.items.length > 0 || m.alternatives.some((a) => a.items.length > 0)
+      );
+      if (!hasAnyContent && existingPlanHadMeals.current) {
+        alert("לא ניתן לשמור תפריט ריק לחלוטין. הוסף לפחות פריט אחד לפני השמירה.");
+        setSaving(false);
+        return;
+      }
+
       // Delete old meals (cascades to items + alternatives)
       await supabase.from("meals").delete().eq("plan_id", planId);
 
@@ -507,6 +526,19 @@ export default function ClientNutritionPage() {
   const totalProtein   = meals.reduce((a, m) => a + m.items.reduce((s, i) => s + i.protein,  0), 0);
   const totalCarbs     = meals.reduce((a, m) => a + m.items.reduce((s, i) => s + i.carbs,    0), 0);
   const totalFat       = meals.reduce((a, m) => a + m.items.reduce((s, i) => s + i.fat,      0), 0);
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen font-heb flex flex-col items-center justify-center gap-5 px-7" style={{ background: "#0B0A08" }}>
+        <p className="text-[14px] text-center leading-relaxed" style={{ color: "#FF8A95" }}>{loadError}</p>
+        <button onClick={() => window.location.reload()}
+          className="tap px-7 py-3 rounded-full font-semibold text-[14px] text-white"
+          style={{ background: ACCENT }}>
+          רענן דף
+        </button>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
