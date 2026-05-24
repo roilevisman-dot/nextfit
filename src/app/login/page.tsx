@@ -52,24 +52,6 @@ function ChevRightIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M17.6 13.2c0-3 2.4-4.4 2.5-4.5-1.4-2-3.5-2.3-4.2-2.3-1.8-.2-3.5 1-4.4 1-.9 0-2.3-1-3.8-1-2 0-3.8 1.1-4.8 2.9-2 3.5-.5 8.7 1.5 11.5.9 1.4 2.1 2.9 3.6 2.9 1.4-.1 2-.9 3.7-.9s2.2.9 3.8.9c1.6 0 2.6-1.4 3.5-2.8 1.1-1.6 1.6-3.2 1.6-3.3-.1 0-3-.9-3-3.4zM14.7 4.6c.8-1 1.3-2.4 1.2-3.7-1.1.1-2.5.8-3.3 1.7-.7.8-1.4 2.2-1.2 3.4 1.2.1 2.5-.6 3.3-1.4z"/>
-    </svg>
-  );
-}
-
-function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" {...props}>
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z" fill="#EA4335"/>
-    </svg>
-  );
-}
 
 interface FieldProps {
   icon: React.ReactNode;
@@ -283,36 +265,6 @@ export default function TrainerLoginPage() {
           </button>
         </div>
 
-        {/* Or divider */}
-        <div className="mt-5 flex items-center gap-3 rise" style={{ animationDelay: "280ms" }}>
-          <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-          <span className="text-[10.5px] tracking-wider uppercase text-white/55">או</span>
-          <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-        </div>
-
-        {/* Social */}
-        <div className="mt-4 grid grid-cols-2 gap-2.5 rise" style={{ animationDelay: "320ms" }}>
-          <button
-            className="tap h-11 rounded-full flex items-center justify-center gap-2 text-white text-[13px]"
-            style={{
-              background: "#0A0A0B",
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)",
-            }}
-          >
-            <AppleIcon className="w-4 h-4" />
-            Apple
-          </button>
-          <button
-            className="tap h-11 rounded-full flex items-center justify-center gap-2 text-white text-[13px]"
-            style={{
-              background: "#0A0A0B",
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.10)",
-            }}
-          >
-            <GoogleIcon className="w-4 h-4" />
-            Google
-          </button>
-        </div>
 
         {/* Footer */}
         <div className="mt-auto pt-6 text-center text-[12.5px] text-white/68">
