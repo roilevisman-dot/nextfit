@@ -79,7 +79,7 @@ export default function JoinPage() {
 
   const handleJoin = async () => {
     if (filledCount < CODE_LENGTH) {
-      setError("הזן את כל 6 הספרות");
+      setError("הזן את כל 5 הספרות");
       return;
     }
     setLoading(true);
@@ -211,7 +211,7 @@ export default function JoinPage() {
           </div>
         )}
 
-        {/* Coach preview card */}
+        {/* Info card */}
         <div
           className="mt-7 rounded-2xl p-3.5 flex items-center gap-3 rise"
           style={{
@@ -224,16 +224,14 @@ export default function JoinPage() {
             className="w-11 h-11 rounded-full grid place-items-center shrink-0"
             style={{ background: "linear-gradient(135deg, #FF4A57, #B81522)" }}
           >
-            <span className="font-bold text-[15px] text-white">יע</span>
+            <span className="font-bold text-[15px] text-white">NF</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10.5px] tracking-wider uppercase text-white/45">
-              מצטרף ל
+              הצטרפות ל
             </div>
-            <div className="text-[14px] font-medium text-white">
-              יואב כהן · NextFit
-            </div>
-            <div className="text-[11px] text-white/50">מאמן כוח · 8 שנות ניסיון</div>
+            <div className="text-[14px] font-medium text-white">NextFit</div>
+            <div className="text-[11px] text-white/50">הזן את הקוד שקיבלת מהמאמן</div>
           </div>
           <CheckIcon className="w-5 h-5 shrink-0" style={{ color: "#7BE39A" }} />
         </div>
