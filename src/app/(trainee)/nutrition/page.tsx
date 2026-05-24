@@ -18,9 +18,6 @@ type Plan = { name: string; total_calories: number | null; meals: Meal[] };
 function CheckIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="20 6 9 17 4 12" /></svg>;
 }
-function ChevronIcon(p: React.SVGProps<SVGSVGElement>) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 18l6-6-6-6" /></svg>;
-}
 function XIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 6 6 18M6 6l12 12" /></svg>;
 }
@@ -299,8 +296,7 @@ export default function NutritionPage() {
             const isDone = done[i];
 
             return (
-              <button key={meal.id} onClick={() => openDetail(i)}
-                className="tap w-full rounded-3xl p-4 flex items-center gap-4 text-right"
+              <div key={meal.id} className="rounded-3xl flex items-center gap-3"
                 style={{
                   background: isDone ? "rgba(225,29,42,0.07)" : "rgba(255,255,255,0.04)",
                   boxShadow: isDone
@@ -308,19 +304,17 @@ export default function NutritionPage() {
                     : "inset 0 0 0 1px rgba(255,255,255,0.07)",
                 }}>
 
-                {/* Icon */}
-                <div className="w-14 h-14 rounded-2xl grid place-items-center flex-shrink-0"
+                {/* Meal icon — right side (DOM first = visual right in RTL) */}
+                <div className="w-14 h-14 rounded-2xl grid place-items-center flex-shrink-0 mr-4 my-3"
                   style={{
                     background: isDone ? "rgba(225,29,42,0.15)" : "rgba(255,255,255,0.06)",
                     boxShadow: isDone ? "inset 0 0 0 1px rgba(225,29,42,0.25)" : "none",
                   }}>
-                  {isDone
-                    ? <CheckIcon className="w-7 h-7" style={{ color: ACCENT }} />
-                    : getMealIcon(meal.name, "w-6 h-6", "rgba(255,255,255,0.55)")}
+                  {getMealIcon(meal.name, "w-6 h-6", isDone ? ACCENT : "rgba(255,255,255,0.55)")}
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
+                {/* Content — tapping opens detail sheet */}
+                <button onClick={() => openDetail(i)} className="tap flex-1 min-w-0 py-3 text-right">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-[15px]" style={{ color: isDone ? "#FAF9F6" : "rgba(255,255,255,0.75)" }}>{meal.name}</p>
                     {selectedAlt && (
@@ -343,10 +337,19 @@ export default function NutritionPage() {
                       {activeItems.length > 3 && " ···"}
                     </p>
                   )}
-                </div>
+                </button>
 
-                <ChevronIcon className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.20)" }} />
-              </button>
+                {/* Check button — left side (DOM last = visual left in RTL) */}
+                <button
+                  onClick={() => toggleDone(i)}
+                  className="tap w-11 h-11 rounded-full grid place-items-center flex-shrink-0 ml-3"
+                  style={{
+                    background: isDone ? ACCENT : "rgba(255,255,255,0.07)",
+                    boxShadow: isDone ? "0 4px 14px rgba(225,29,42,0.40)" : "inset 0 0 0 1.5px rgba(255,255,255,0.15)",
+                  }}>
+                  <CheckIcon className="w-5 h-5" style={{ color: isDone ? "#fff" : "rgba(255,255,255,0.25)" }} />
+                </button>
+              </div>
             );
           })}
         </div>
