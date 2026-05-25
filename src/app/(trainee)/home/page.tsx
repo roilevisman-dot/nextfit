@@ -37,7 +37,7 @@ type Meal = { id: string; name: string; time_window: string | null; items: MealI
 type MealPlan = { name: string; total_calories: number | null; meals: Meal[] };
 type WeightLog = { weight: number; logged_at: string };
 
-const WATER_GOAL = 4;
+const DEFAULT_WATER_GOAL = 3;
 const HEB_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 const HEB_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
@@ -54,10 +54,11 @@ export default function HomePage() {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [doneMeals, setDoneMeals] = useState<boolean[]>([]);
   const [water, setWater] = useState(0);
+  const [waterGoal, setWaterGoal] = useState(DEFAULT_WATER_GOAL);
   const [loading, setLoading] = useState(true);
 
   const addWater = () => {
-    const next = Math.min(WATER_GOAL, parseFloat((water + 0.25).toFixed(2)));
+    const next = Math.min(waterGoal, parseFloat((water + 0.25).toFixed(2)));
     setWater(next);
     const today = new Date().toISOString().split("T")[0];
     localStorage.setItem(`nf_water_${today}`, next.toString());
@@ -89,11 +90,12 @@ export default function HomePage() {
 
       // Client basics
       const { data: cd } = await supabase.from("clients")
-        .select("name, current_weight")
+        .select("name, current_weight, water_goal_liters")
         .eq("id", cid).single();
       if (cd) {
         setClientName(cd.name);
         setCurrentWeight(cd.current_weight);
+        setWaterGoal(cd.water_goal_liters ?? DEFAULT_WATER_GOAL);
       }
 
       // Weight logs last 7 days
@@ -231,7 +233,7 @@ export default function HomePage() {
   const prevWeight   = weightLogs.length > 1 ? weightLogs[weightLogs.length - 2].weight : null;
   const weightDelta  = prevWeight !== null && latestWeight !== null ? latestWeight - prevWeight : null;
 
-  const waterPct = water / WATER_GOAL;
+  const waterPct = water / waterGoal;
 
   if (loading) {
     return (
@@ -421,7 +423,7 @@ export default function HomePage() {
               <div>
                 <div className="text-[22px] leading-none nums font-bold" style={{ color: "#FAF9F6" }}>
                   {water.toFixed(1)}
-                  <span className="text-[12px] font-normal" style={{ color: "rgba(255,255,255,0.40)" }}> / {WATER_GOAL}L</span>
+                  <span className="text-[12px] font-normal" style={{ color: "rgba(255,255,255,0.40)" }}> / {waterGoal}L</span>
                 </div>
                 <div className="mt-1.5 text-[11px] nums" style={{ color: "rgba(255,255,255,0.40)" }}>
                   {Math.round(waterPct * 100)}% מהיעד

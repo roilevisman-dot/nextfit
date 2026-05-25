@@ -21,6 +21,7 @@ type Client = {
   hips_cm: number | null;
   arm_cm: number | null;
   thigh_cm: number | null;
+  water_goal_liters: number | null;
 };
 
 
@@ -28,6 +29,7 @@ type EditForm = {
   age: string; phone: string; email: string; height_cm: string;
   current_weight: string; goal_weight: string; goal: string;
   chest_cm: string; waist_cm: string; hips_cm: string; arm_cm: string; thigh_cm: string;
+  water_goal_liters: string;
 };
 
 const avatarColors = ["#5B4CF5", "#0EA5E9", "#10B981", "#F97316", "#EC4899"];
@@ -85,7 +87,7 @@ export default function ClientDetailPage() {
   const [pickerDuration, setPickerDuration] = useState<number | null>(null);
   const [savingDuration, setSavingDuration] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", current_weight: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ age: "", phone: "", email: "", height_cm: "", current_weight: "", goal_weight: "", goal: "", chest_cm: "", waist_cm: "", hips_cm: "", arm_cm: "", thigh_cm: "", water_goal_liters: "" });
   const [editSaving, setEditSaving] = useState(false);
 
   const supabase = createClient();
@@ -138,6 +140,7 @@ export default function ClientDetailPage() {
       hips_cm: client.hips_cm?.toString() ?? "",
       arm_cm: client.arm_cm?.toString() ?? "",
       thigh_cm: client.thigh_cm?.toString() ?? "",
+      water_goal_liters: client.water_goal_liters?.toString() ?? "",
     });
     setShowEdit(true);
   };
@@ -158,6 +161,7 @@ export default function ClientDetailPage() {
       hips_cm: f.hips_cm ? parseFloat(f.hips_cm) : null,
       arm_cm: f.arm_cm ? parseFloat(f.arm_cm) : null,
       thigh_cm: f.thigh_cm ? parseFloat(f.thigh_cm) : null,
+      water_goal_liters: f.water_goal_liters ? parseFloat(f.water_goal_liters) : 3,
     }).eq("id", clientId);
     await fetchClient();
     setShowEdit(false);
@@ -220,6 +224,7 @@ export default function ClientDetailPage() {
     { label: "ירכיים", value: client.hips_cm ? `${client.hips_cm} ס"מ` : null },
     { label: "זרוע", value: client.arm_cm ? `${client.arm_cm} ס"מ` : null },
     { label: "ירך", value: client.thigh_cm ? `${client.thigh_cm} ס"מ` : null },
+    { label: "יעד מים", value: client.water_goal_liters ? `${client.water_goal_liters} ל׳` : null },
   ].filter((r): r is { label: string; value: string } => r.value !== null && r.value !== undefined);
 
   return (
@@ -408,6 +413,10 @@ export default function ClientDetailPage() {
                 <div>
                   <p className="text-[10.5px] text-white/40 mb-1.5">מטרה</p>
                   <input type="text" value={editForm.goal} onChange={setF("goal")} placeholder="הורדת שומן, חיזוק שרירים..." className={INP_CLASS} style={INP_STYLE} />
+                </div>
+                <div>
+                  <p className="text-[10.5px] text-white/40 mb-1.5">יעד מים יומי (ליטר)</p>
+                  <input type="number" inputMode="decimal" value={editForm.water_goal_liters} onChange={setF("water_goal_liters")} placeholder="3" className={INP_CLASS} style={INP_STYLE} />
                 </div>
               </div>
 

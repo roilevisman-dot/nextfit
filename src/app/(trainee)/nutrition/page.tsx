@@ -50,7 +50,7 @@ function getMealIcon(name: string, size = "w-6 h-6", color = "#E11D2A") {
   return <UtensilsIcon {...props} />;
 }
 
-const WATER_GOAL = 4;
+const DEFAULT_waterGoal = 3;
 const ACCENT = "#E11D2A";
 
 export default function NutritionPage() {
@@ -64,6 +64,7 @@ export default function NutritionPage() {
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
   const [detailTabId, setDetailTabId] = useState<string | null>(null);
   const [water, setWater] = useState(0);
+  const [waterGoal, setWaterGoal] = useState(DEFAULT_waterGoal);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -71,8 +72,11 @@ export default function NutritionPage() {
     const clientId = typeof window !== "undefined" ? localStorage.getItem("nextfit_client_id") : null;
     if (!clientId) { router.push("/join"); return; }
 
-    const { data: waterLog } = await supabase.from("daily_water_logs")
-      .select("water_liters").eq("client_id", clientId).eq("log_date", today).single();
+    const [{ data: waterLog }, { data: clientData }] = await Promise.all([
+      supabase.from("daily_water_logs").select("water_liters").eq("client_id", clientId).eq("log_date", today).maybeSingle(),
+      supabase.from("clients").select("water_goal_liters").eq("id", clientId).single(),
+    ]);
+    if (clientData?.water_goal_liters) setWaterGoal(clientData.water_goal_liters);
     if (waterLog) setWater(waterLog.water_liters);
     else {
       const saved = localStorage.getItem(`nf_water_${today}`);
@@ -164,7 +168,7 @@ export default function NutritionPage() {
 
   const changeWater = async (delta: number) => {
     const clientId = localStorage.getItem("nextfit_client_id");
-    const next = Math.max(0, Math.min(WATER_GOAL, parseFloat((water + delta).toFixed(2))));
+    const next = Math.max(0, Math.min(waterGoal, parseFloat((water + delta).toFixed(2))));
     setWater(next);
     localStorage.setItem(`nf_water_${today}`, next.toString());
     if (clientId) {
@@ -184,7 +188,7 @@ export default function NutritionPage() {
   }, 0) ?? 0;
   const totalCalories = plan?.total_calories ?? 0;
   const doneMealsCount = done.filter(Boolean).length;
-  const waterPct = water / WATER_GOAL;
+  const waterPct = water / waterGoal;
 
   if (loading) {
     return (
@@ -266,8 +270,8 @@ export default function NutritionPage() {
               <DropIcon className="w-4 h-4" style={{ color: "#3B82F6" }} />
               <span className="text-[13px] font-semibold">שתייה</span>
             </div>
-            <span className="text-[13px] font-bold" style={{ color: water >= WATER_GOAL ? "#10B981" : "rgba(255,255,255,0.70)" }}>
-              {water.toFixed(2)}<span className="text-[11px] font-normal text-white/35"> / {WATER_GOAL}L</span>
+            <span className="text-[13px] font-bold" style={{ color: water >= waterGoal ? "#10B981" : "rgba(255,255,255,0.70)" }}>
+              {water.toFixed(2)}<span className="text-[11px] font-normal text-white/35"> / {waterGoal}L</span>
             </span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.07)" }}>
