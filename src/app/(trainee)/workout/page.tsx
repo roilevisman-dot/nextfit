@@ -301,21 +301,19 @@ export default function WorkoutPage() {
 
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[14px] truncate">{ex.name}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="flex items-center gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.50)" }}>
-                          <DumbbellIcon className="w-3 h-3" />
-                          {ex.sets} × {ex.reps}
-                        </span>
-                        <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.20)" }} />
-                        <span className="flex items-center gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.50)" }}>
-                          <TimerIcon className="w-3 h-3" />
-                          {ex.rest_seconds}שנ׳
-                        </span>
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 px-2.5 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                          <DumbbellIcon className="w-3 h-3" style={{ color: "rgba(255,255,255,0.40)" }} />
+                          <span className="text-[13px] font-bold nums">{ex.sets} × {ex.reps}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                          <TimerIcon className="w-3 h-3" style={{ color: "rgba(255,255,255,0.40)" }} />
+                          <span className="text-[13px] font-bold nums">{ex.rest_seconds}<span className="text-[10px] font-normal" style={{ color: "rgba(255,255,255,0.38)" }}> שנ׳</span></span>
+                        </div>
                         {ex.weight_kg ? (
-                          <>
-                            <span className="w-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.20)" }} />
-                            <span className="text-[11px]" style={{ color: "rgba(225,29,42,0.80)" }}>{ex.weight_kg}ק״ג</span>
-                          </>
+                          <div className="flex items-center gap-1 px-2.5 h-7 rounded-full" style={{ background: "rgba(225,29,42,0.12)", boxShadow: "inset 0 0 0 1px rgba(225,29,42,0.22)" }}>
+                            <span className="text-[13px] font-bold nums" style={{ color: "#FF8A95" }}>{ex.weight_kg}<span className="text-[10px] font-normal" style={{ color: "rgba(255,138,149,0.65)" }}> ק״ג</span></span>
+                          </div>
                         ) : null}
                       </div>
                     </div>
