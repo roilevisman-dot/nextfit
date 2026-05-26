@@ -94,35 +94,39 @@ export default function NutritionPage() {
     ]);
     if (!planData || !mealsData) { setLoading(false); return; }
 
-    const mealsWithAll: Meal[] = await Promise.all(
-      mealsData.map(async (meal) => {
-        const [{ data: items }, { data: altsData }] = await Promise.all([
-          supabase.from("meal_items").select("food_name, amount, calories, protein_g, carbs_g, fat_g").eq("meal_id", meal.id).order("order_index"),
-          supabase.from("meal_alternatives").select("id, option_number").eq("meal_id", meal.id).order("option_number"),
-        ]);
-        const alternatives: Alternative[] = await Promise.all(
-          (altsData ?? []).map(async (alt) => {
-            const { data: altItems } = await supabase.from("meal_alternative_items")
-              .select("food_name, amount, calories, protein_g, carbs_g, fat_g").eq("alternative_id", alt.id).order("order_index");
-            return { id: alt.id, option_number: alt.option_number as 1 | 2 | 3, items: altItems ?? [] };
-          })
-        );
-        return { id: meal.id, name: meal.name, time_window: meal.time_window, items: items ?? [], alternatives };
-      })
-    );
+    const mealIds = mealsData.map((m) => m.id);
+
+    // Fetch all items, alternatives, and logs in parallel — no N+1
+    const [{ data: allItems }, { data: allAlts }, { data: logs }] = await Promise.all([
+      supabase.from("meal_items").select("meal_id, food_name, amount, calories, protein_g, carbs_g, fat_g").in("meal_id", mealIds).order("order_index"),
+      supabase.from("meal_alternatives").select("id, meal_id, option_number").in("meal_id", mealIds).order("option_number"),
+      supabase.from("meal_logs").select("meal_id, alternative_id").eq("client_id", clientId).eq("log_date", today).in("meal_id", mealIds),
+    ]);
+
+    // Fetch all alternative items in one shot
+    const altIds = (allAlts ?? []).map((a) => a.id);
+    const { data: allAltItems } = altIds.length > 0
+      ? await supabase.from("meal_alternative_items").select("alternative_id, food_name, amount, calories, protein_g, carbs_g, fat_g").in("alternative_id", altIds).order("order_index")
+      : { data: [] as { alternative_id: string; food_name: string; amount: string | null; calories: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[] };
+
+    // Group into meals
+    const mealsWithAll: Meal[] = mealsData.map((meal) => ({
+      id: meal.id,
+      name: meal.name,
+      time_window: meal.time_window,
+      items: (allItems ?? []).filter((it) => (it as MealItem & { meal_id: string }).meal_id === meal.id),
+      alternatives: (allAlts ?? [])
+        .filter((a) => (a as { meal_id: string; id: string; option_number: number }).meal_id === meal.id)
+        .map((alt) => ({
+          id: alt.id,
+          option_number: alt.option_number as 1 | 2 | 3,
+          items: (allAltItems ?? []).filter((ai) => ai.alternative_id === alt.id),
+        })),
+    }));
 
     setPlan({ ...planData, meals: mealsWithAll });
-
-    const mealIds = mealsData.map((m) => m.id);
-    if (mealIds.length > 0) {
-      const { data: logs } = await supabase.from("meal_logs")
-        .select("meal_id, alternative_id").eq("client_id", clientId).eq("log_date", today).in("meal_id", mealIds);
-      setDone(mealsData.map((m) => !!(logs ?? []).find((l) => l.meal_id === m.id)));
-      setSelectedAlts(mealsData.map((m) => (logs ?? []).find((l) => l.meal_id === m.id)?.alternative_id ?? null));
-    } else {
-      setDone(new Array(mealsWithAll.length).fill(false));
-      setSelectedAlts(new Array(mealsWithAll.length).fill(null));
-    }
+    setDone(mealsData.map((m) => !!(logs ?? []).find((l) => l.meal_id === m.id)));
+    setSelectedAlts(mealsData.map((m) => (logs ?? []).find((l) => l.meal_id === m.id)?.alternative_id ?? null));
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today, router]);

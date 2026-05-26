@@ -78,107 +78,93 @@ export default function HomePage() {
     const today = new Date().toISOString().split("T")[0];
 
     const init = async () => {
-      // Water: DB first, fallback localStorage
-      const { data: waterLog } = await supabase.from("daily_water_logs")
-        .select("water_liters").eq("client_id", cid).eq("log_date", today).single();
-      if (waterLog) {
-        setWater(waterLog.water_liters);
-      } else {
-        const saved = localStorage.getItem(`nf_water_${today}`);
-        if (saved) setWater(parseFloat(saved));
-      }
-
-      // Client basics
-      const { data: cd } = await supabase.from("clients")
-        .select("name, current_weight, water_goal_liters")
-        .eq("id", cid).single();
-      if (cd) {
-        setClientName(cd.name);
-        setCurrentWeight(cd.current_weight);
-        setWaterGoal(cd.water_goal_liters ?? DEFAULT_WATER_GOAL);
-      }
-
-      // Weight logs last 7 days
       const since = new Date();
       since.setDate(since.getDate() - 7);
-      const { data: wlogs } = await supabase.from("weight_logs")
-        .select("weight, logged_at")
-        .eq("client_id", cid)
-        .gte("logged_at", since.toISOString())
-        .order("logged_at");
+
+      // Round 1: fetch all independent data in parallel
+      const [
+        { data: waterLog },
+        { data: cd },
+        { data: wlogs },
+        { data: cpRows },
+        { data: cmpRows },
+      ] = await Promise.all([
+        supabase.from("daily_water_logs").select("water_liters").eq("client_id", cid).eq("log_date", today).maybeSingle(),
+        supabase.from("clients").select("name, current_weight, water_goal_liters").eq("id", cid).single(),
+        supabase.from("weight_logs").select("weight, logged_at").eq("client_id", cid).gte("logged_at", since.toISOString()).order("logged_at"),
+        supabase.from("client_plans").select("plan_id").eq("client_id", cid).eq("active", true).order("id", { ascending: false }).limit(1),
+        supabase.from("client_meal_plans").select("meal_plan_id").eq("client_id", cid).eq("active", true).order("id", { ascending: false }).limit(1),
+      ]);
+
+      if (waterLog) setWater(waterLog.water_liters);
+      else { const saved = localStorage.getItem(`nf_water_${today}`); if (saved) setWater(parseFloat(saved)); }
+      if (cd) { setClientName(cd.name); setCurrentWeight(cd.current_weight); setWaterGoal(cd.water_goal_liters ?? DEFAULT_WATER_GOAL); }
       if (wlogs) setWeightLogs(wlogs);
 
-      // Active workout plan
-      const { data: cpRows } = await supabase.from("client_plans")
-        .select("plan_id")
-        .eq("client_id", cid).eq("active", true)
-        .order("id", { ascending: false }).limit(1);
-      const cp = cpRows?.[0];
+      const planId = cpRows?.[0]?.plan_id ?? null;
+      const mealPlanId = cmpRows?.[0]?.meal_plan_id ?? null;
 
-      if (cp?.plan_id) {
-        const { data: wdays } = await supabase.from("workout_days")
-          .select("id, day_number, label")
-          .eq("plan_id", cp.plan_id)
-          .order("day_number");
+      // Round 2: fetch dependent lists in parallel
+      const [wdaysRes, mpDataRes, mealsDataRes] = await Promise.all([
+        planId
+          ? supabase.from("workout_days").select("id, day_number, label").eq("plan_id", planId).order("day_number")
+          : Promise.resolve({ data: null }),
+        mealPlanId
+          ? supabase.from("meal_plans").select("name, total_calories").eq("id", mealPlanId).single()
+          : Promise.resolve({ data: null }),
+        mealPlanId
+          ? supabase.from("meals").select("id, name, time_window").eq("plan_id", mealPlanId).order("order_index")
+          : Promise.resolve({ data: null }),
+      ]);
 
-        const loadedDays: WorkoutDay[] = await Promise.all(
-          (wdays ?? []).map(async (day) => {
-            const { data: exs } = await supabase.from("plan_exercises")
-              .select("name, sets, reps")
-              .eq("day_id", day.id)
-              .order("order_index");
-            return { id: day.id, day_number: day.day_number, label: day.label, exercises: exs ?? [] };
-          })
-        );
+      const wdays = wdaysRes.data ?? [];
+      const mealsData = mealsDataRes.data ?? [];
+      const dayIds = wdays.map((d) => d.id);
+      const mealIds = mealsData.map((m) => m.id);
+
+      // Round 3: fetch all items/logs in parallel (no more N+1)
+      const [allExsRes, sessionsRes, allItemsRes, logsRes] = await Promise.all([
+        dayIds.length > 0
+          ? supabase.from("plan_exercises").select("name, sets, reps, day_id").in("day_id", dayIds).order("order_index")
+          : Promise.resolve({ data: null, count: null }),
+        dayIds.length > 0
+          ? supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("client_id", cid).eq("completed", true).in("day_id", dayIds)
+          : Promise.resolve({ data: null, count: 0 }),
+        mealIds.length > 0
+          ? supabase.from("meal_items").select("meal_id, food_name, calories, protein_g, carbs_g, fat_g").in("meal_id", mealIds).order("order_index")
+          : Promise.resolve({ data: null }),
+        mealIds.length > 0
+          ? supabase.from("meal_logs").select("meal_id").eq("client_id", cid).eq("log_date", today).in("meal_id", mealIds)
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // Assemble workout days
+      if (wdays.length > 0) {
+        const allExs = allExsRes.data ?? [];
+        const loadedDays: WorkoutDay[] = wdays.map((day) => ({
+          id: day.id,
+          day_number: day.day_number,
+          label: day.label,
+          exercises: allExs.filter((e) => (e as { day_id: string } & Exercise).day_id === day.id),
+        }));
         setDays(loadedDays);
-
-        if (loadedDays.length > 0) {
-          const dayIds = loadedDays.map((d) => d.id);
-          const { count } = await supabase.from("workout_sessions")
-            .select("id", { count: "exact", head: true })
-            .eq("client_id", cid)
-            .eq("completed", true)
-            .in("day_id", dayIds);
-          const cnt = count ?? 0;
-          setTotalSessions(cnt);
-          setTodayDayIndex(cnt % loadedDays.length);
-        }
+        const cnt = sessionsRes.count ?? 0;
+        setTotalSessions(cnt);
+        setTodayDayIndex(cnt % loadedDays.length);
       }
 
-      // Active meal plan
-      const { data: cmpRows } = await supabase.from("client_meal_plans")
-        .select("meal_plan_id")
-        .eq("client_id", cid).eq("active", true)
-        .order("id", { ascending: false }).limit(1);
-      const cmp = cmpRows?.[0];
-
-      if (cmp?.meal_plan_id) {
-        const [{ data: mpData }, { data: mealsData }] = await Promise.all([
-          supabase.from("meal_plans").select("name, total_calories").eq("id", cmp.meal_plan_id).single(),
-          supabase.from("meals").select("id, name, time_window").eq("plan_id", cmp.meal_plan_id).order("order_index"),
-        ]);
-
-        const loadedMeals: Meal[] = await Promise.all(
-          (mealsData ?? []).map(async (meal) => {
-            const { data: items } = await supabase.from("meal_items")
-              .select("food_name, calories, protein_g, carbs_g, fat_g")
-              .eq("meal_id", meal.id)
-              .order("order_index");
-            return { id: meal.id, name: meal.name, time_window: meal.time_window, items: items ?? [] };
-          })
-        );
-
-        if (mpData) {
-          setMealPlan({ name: mpData.name, total_calories: mpData.total_calories, meals: loadedMeals });
-          const mealIds = loadedMeals.map((m) => m.id);
-          if (mealIds.length > 0) {
-            const { data: logs } = await supabase.from("meal_logs")
-              .select("meal_id").eq("client_id", cid).eq("log_date", today).in("meal_id", mealIds);
-            setDoneMeals(loadedMeals.map((m) => !!(logs ?? []).find((l) => l.meal_id === m.id)));
-          } else {
-            setDoneMeals(new Array(loadedMeals.length).fill(false));
-          }
-        }
+      // Assemble meals
+      if (mpDataRes.data && mealsData.length > 0) {
+        const allItems = allItemsRes.data ?? [];
+        const logs = logsRes.data ?? [];
+        const loadedMeals: Meal[] = mealsData.map((meal) => ({
+          id: meal.id,
+          name: meal.name,
+          time_window: meal.time_window,
+          items: allItems.filter((it) => (it as MealItem & { meal_id: string }).meal_id === meal.id),
+        }));
+        setMealPlan({ name: mpDataRes.data.name, total_calories: mpDataRes.data.total_calories, meals: loadedMeals });
+        setDoneMeals(loadedMeals.map((m) => !!logs.find((l) => l.meal_id === m.id)));
       }
 
       setLoading(false);

@@ -91,40 +91,27 @@ export default function WorkoutPage() {
     const cp = cpRows?.[0] ?? null;
     if (!cp) { setLoading(false); return; }
 
-    const { data: planData } = await supabase
-      .from("workout_plans")
-      .select("name, days_per_week, duration_weeks, created_at")
-      .eq("id", cp.plan_id)
-      .single();
-
-    const { data: daysData } = await supabase
-      .from("workout_days")
-      .select("id, day_number, label")
-      .eq("plan_id", cp.plan_id)
-      .order("day_number");
+    // Fetch plan metadata + days in parallel
+    const [{ data: planData }, { data: daysData }] = await Promise.all([
+      supabase.from("workout_plans").select("name, days_per_week, duration_weeks, created_at").eq("id", cp.plan_id).single(),
+      supabase.from("workout_days").select("id, day_number, label").eq("plan_id", cp.plan_id).order("day_number"),
+    ]);
 
     if (!planData || !daysData) { setLoading(false); return; }
 
-    const daysWithExercises: WorkoutDay[] = await Promise.all(
-      daysData.map(async (day) => {
-        const { data: exData } = await supabase
-          .from("plan_exercises")
-          .select("name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
-          .eq("day_id", day.id)
-          .order("order_index");
-        return { ...day, exercises: exData ?? [] };
-      })
-    );
-
-    // Load today's completed sessions
     const dayIds = daysData.map((d) => d.id);
-    const { data: sessions } = await supabase
-      .from("workout_sessions")
-      .select("day_id")
-      .eq("client_id", cid)
-      .eq("session_date", TODAY)
-      .eq("completed", true)
-      .in("day_id", dayIds);
+
+    // Fetch all exercises + sessions in parallel — no N+1
+    const [{ data: allExData }, { data: sessions }] = await Promise.all([
+      supabase.from("plan_exercises").select("day_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index").in("day_id", dayIds).order("order_index"),
+      supabase.from("workout_sessions").select("day_id").eq("client_id", cid).eq("session_date", TODAY).eq("completed", true).in("day_id", dayIds),
+    ]);
+
+    const daysWithExercises: WorkoutDay[] = daysData.map((day) => ({
+      ...day,
+      exercises: (allExData ?? []).filter((e) => (e as PlanExercise & { day_id: string }).day_id === day.id),
+    }));
+
     setCompletedDays(new Set(sessions?.map((s) => s.day_id) ?? []));
 
     if (planData.created_at) setPlanStartDate(planData.created_at);
