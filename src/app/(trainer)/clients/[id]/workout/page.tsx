@@ -73,6 +73,12 @@ function YTIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.3v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.7 12 21.7 12 21.7s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>;
 }
 
+function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/);
+  return m?.[1] ?? null;
+}
+
 export default function ClientWorkoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -409,7 +415,28 @@ export default function ClientWorkoutPage() {
                     className="flex-1 bg-transparent outline-none text-[12px] placeholder:text-white/25"
                     style={{ color: "#FAF9F6" }}
                   />
+                  {ex.youtube_url && !extractYouTubeId(ex.youtube_url) && (
+                    <span className="text-[10px] flex-shrink-0" style={{ color: "#F97316" }}>קישור לא תקין</span>
+                  )}
                 </div>
+                {extractYouTubeId(ex.youtube_url) && (
+                  <div className="relative rounded-xl overflow-hidden mb-2" style={{ aspectRatio: "16/9" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://img.youtube.com/vi/${extractYouTubeId(ex.youtube_url)}/mqdefault.jpg`}
+                      alt="תצוגה מקדימה"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }}>
+                      <div className="w-12 h-12 rounded-full grid place-items-center" style={{ background: "rgba(200,0,0,0.85)" }}>
+                        <YTIcon className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 right-2 text-[9px] px-2 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.60)", color: "rgba(255,255,255,0.70)" }}>
+                      תצוגה מקדימה
+                    </div>
+                  </div>
+                )}
 
                 <textarea
                   value={ex.notes}

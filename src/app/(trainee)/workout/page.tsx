@@ -64,6 +64,12 @@ function TimerIcon(props: React.SVGProps<SVGSVGElement>) {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
+function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/);
+  return m?.[1] ?? null;
+}
+
 export default function WorkoutPage() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +78,7 @@ export default function WorkoutPage() {
   const [markingDone, setMarkingDone] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   const supabase = createClient();
   const router = useRouter();
@@ -321,12 +328,25 @@ export default function WorkoutPage() {
                       {ex.notes && (
                         <p className="text-[11px] leading-relaxed pt-2" style={{ color: "rgba(255,255,255,0.38)" }}>{ex.notes}</p>
                       )}
-                      {ex.youtube_url && (
-                        <a href={ex.youtube_url} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-[11px] pt-1" style={{ color: "rgba(255,100,100,0.75)" }}>
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.3v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.7 12 21.7 12 21.7s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
-                          סרטון הסבר
-                        </a>
+                      {ex.youtube_url && extractYouTubeId(ex.youtube_url) && (
+                        <button
+                          onClick={() => setVideoUrl(ex.youtube_url)}
+                          className="tap flex items-center gap-2 mt-2 w-full rounded-xl overflow-hidden"
+                          style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
+                        >
+                          <div className="relative w-20 h-12 flex-shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`https://img.youtube.com/vi/${extractYouTubeId(ex.youtube_url)}/mqdefault.jpg`}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.40)" }}>
+                              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.5-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14z"/></svg>
+                            </div>
+                          </div>
+                          <span className="text-[12px] font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>צפה בסרטון הדגמה</span>
+                        </button>
                       )}
                     </div>
                   )}
@@ -336,6 +356,35 @@ export default function WorkoutPage() {
           </div>
         )}
       </div>
+
+      {/* YouTube video overlay */}
+      {videoUrl && extractYouTubeId(videoUrl) && (
+        <div className="fixed inset-0 z-50 flex flex-col font-heb" style={{ background: "#000" }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-14 pb-4 flex-shrink-0">
+            <span className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,0.50)" }}>סרטון הדגמה</span>
+            <button
+              onClick={() => setVideoUrl(null)}
+              className="tap flex items-center gap-1.5 px-4 h-9 rounded-full text-[13px] font-semibold"
+              style={{ background: "rgba(255,255,255,0.10)", color: "#fff" }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              חזרה לאימון
+            </button>
+          </div>
+
+          {/* Video */}
+          <div className="flex-1 flex items-center px-0">
+            <iframe
+              src={`https://www.youtube.com/embed/${extractYouTubeId(videoUrl)}?autoplay=1&rel=0`}
+              className="w-full"
+              style={{ aspectRatio: "16/9" }}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
