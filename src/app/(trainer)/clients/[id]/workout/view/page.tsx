@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 type Exercise = {
   name: string;
   sets: number;
-  reps: number;
+  reps: string;
   rest_seconds: number;
   weight_kg: number | null;
   youtube_url: string | null;

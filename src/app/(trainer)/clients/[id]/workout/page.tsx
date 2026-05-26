@@ -8,7 +8,7 @@ type PlanExercise = {
   exercise_id: string;
   name: string;
   sets: number;
-  reps: number;
+  reps: string;
   rest_seconds: number;
   weight_kg: number;
   youtube_url: string;
@@ -54,7 +54,7 @@ const GROUPS = ["הכל", "חזה", "גב", "כתפיים", "יד קדמית", "
 const DAY_LABELS = ["יום א׳", "יום ב׳", "יום ג׳", "יום ד׳", "יום ה׳", "יום ו׳"];
 
 function newEx(name: string): PlanExercise {
-  return { exercise_id: "", name, sets: 3, reps: 12, rest_seconds: 60, weight_kg: 0, youtube_url: "", notes: "", order_index: 0 };
+  return { exercise_id: "", name, sets: 3, reps: "12", rest_seconds: 60, weight_kg: 0, youtube_url: "", notes: "", order_index: 0 };
 }
 
 function BackIcon(p: React.SVGProps<SVGSVGElement>) {
@@ -163,7 +163,7 @@ export default function ClientWorkoutPage() {
                   exercise_id: e.exercise_id ?? "",
                   name: e.name ?? "",
                   sets: e.sets ?? 3,
-                  reps: e.reps ?? 12,
+                  reps: String(e.reps ?? "12"),
                   rest_seconds: e.rest_seconds ?? 60,
                   weight_kg: e.weight_kg ?? 0,
                   youtube_url: e.youtube_url ?? "",
@@ -211,11 +211,24 @@ export default function ClientWorkoutPage() {
   const updateField = (ei: number, field: keyof PlanExercise, value: string | number) =>
     setDays((prev) => prev.map((d, i) => i === activeDay ? { ...d, exercises: d.exercises.map((e, j) => j === ei ? { ...e, [field]: value } : e) } : d));
 
-  const spin = (ei: number, field: "sets" | "reps" | "rest_seconds" | "weight_kg", dir: 1 | -1) => {
+  const spin = (ei: number, field: "sets" | "rest_seconds" | "weight_kg", dir: 1 | -1) => {
     const step = field === "rest_seconds" ? 15 : field === "weight_kg" ? 2.5 : 1;
     const min = field === "weight_kg" || field === "rest_seconds" ? 0 : 1;
     const cur = (currentDay?.exercises[ei]?.[field] as number) ?? 0;
     updateField(ei, field, Math.max(min, parseFloat((cur + dir * step).toFixed(1))));
+  };
+
+  const spinReps = (ei: number, dir: 1 | -1) => {
+    const cur = String(currentDay?.exercises[ei]?.reps ?? "12");
+    const range = cur.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const lo = Math.max(1, parseInt(range[1]) + dir);
+      const hi = Math.max(lo + 1, parseInt(range[2]) + dir);
+      updateField(ei, "reps", `${lo}-${hi}`);
+    } else {
+      const n = Math.max(1, parseInt(cur || "12") + dir);
+      updateField(ei, "reps", String(n));
+    }
   };
 
   const saveAll = async () => {
@@ -388,8 +401,7 @@ export default function ClientWorkoutPage() {
                 <div className="grid grid-cols-2 gap-2.5 mb-3">
                   {([
                     { label: "משקל", unit: "ק״ג", field: "weight_kg" as const },
-                    { label: "סטים",  unit: "",    field: "sets"         as const },
-                    { label: "חזרות", unit: "",    field: "reps"         as const },
+                    { label: "סטים",  unit: "",    field: "sets"       as const },
                     { label: "מנוחה", unit: "שנ׳", field: "rest_seconds" as const },
                   ] as const).map(({ label, unit, field }) => (
                     <div key={field} className="rounded-2xl p-3"
@@ -409,6 +421,29 @@ export default function ClientWorkoutPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Reps tile — accepts "12" or "8-12" */}
+                  <div className="rounded-2xl p-3"
+                    style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09)" }}>
+                    <p className="text-[10px] text-center mb-2.5" style={{ color: "rgba(255,255,255,0.38)" }}>חזרות</p>
+                    <div className="flex items-center justify-between gap-1">
+                      <button onClick={() => spinReps(ei, -1)}
+                        className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                        style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                      <input
+                        type="text"
+                        value={ex.reps}
+                        onChange={(e) => updateField(ei, "reps", e.target.value)}
+                        className="flex-1 text-center text-[24px] font-extrabold leading-none nums bg-transparent outline-none min-w-0"
+                        style={{ color: "#FAF9F6" }}
+                        inputMode="text"
+                      />
+                      <button onClick={() => spinReps(ei, 1)}
+                        className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                        style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                    </div>
+                    <p className="text-[9px] text-center mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>12 או 8-12</p>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 rounded-xl px-3 h-10 mb-2" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>

@@ -8,7 +8,7 @@ import { NFMark } from "@/components/NFMark";
 type PlanExercise = {
   name: string;
   sets: number;
-  reps: number;
+  reps: string;
   rest_seconds: number;
   weight_kg: number | null;
   youtube_url: string | null;
