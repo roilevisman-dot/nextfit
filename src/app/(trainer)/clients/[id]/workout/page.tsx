@@ -223,17 +223,25 @@ export default function ClientWorkoutPage() {
     updateField(ei, field, Math.max(min, parseFloat((cur + dir * step).toFixed(1))));
   };
 
-  const spinReps = (ei: number, dir: 1 | -1) => {
-    const cur = String(currentDay?.exercises[ei]?.reps ?? "12");
-    const range = cur.match(/^(\d+)-(\d+)$/);
-    if (range) {
-      const lo = Math.max(1, parseInt(range[1]) + dir);
-      const hi = Math.max(lo + 1, parseInt(range[2]) + dir);
-      updateField(ei, "reps", `${lo}-${hi}`);
-    } else {
-      const n = Math.max(1, parseInt(cur || "12") + dir);
-      updateField(ei, "reps", String(n));
-    }
+  const spinRepsFixed = (ei: number, dir: 1 | -1) => {
+    const cur = parseInt(String(currentDay?.exercises[ei]?.reps ?? "12")) || 12;
+    updateField(ei, "reps", String(Math.max(1, cur + dir)));
+  };
+
+  const spinRepsLow = (ei: number, dir: 1 | -1) => {
+    const m = String(currentDay?.exercises[ei]?.reps ?? "8-12").match(/^(\d+)-(\d+)$/);
+    if (!m) return;
+    const lo = Math.max(1, parseInt(m[1]) + dir);
+    const hi = Math.max(lo + 1, parseInt(m[2]));
+    updateField(ei, "reps", `${lo}-${hi}`);
+  };
+
+  const spinRepsHigh = (ei: number, dir: 1 | -1) => {
+    const m = String(currentDay?.exercises[ei]?.reps ?? "8-12").match(/^(\d+)-(\d+)$/);
+    if (!m) return;
+    const lo = parseInt(m[1]);
+    const hi = Math.max(lo + 1, parseInt(m[2]) + dir);
+    updateField(ei, "reps", `${lo}-${hi}`);
   };
 
   const pickDow = (dayIdx: number, dow: number | null) => {
@@ -430,53 +438,90 @@ export default function ClientWorkoutPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
+                {/* 3 spinner tiles */}
+                <div className="grid grid-cols-3 gap-1.5 mb-2.5">
                   {([
                     { label: "משקל", unit: "ק״ג", field: "weight_kg" as const },
                     { label: "סטים",  unit: "",    field: "sets"       as const },
                     { label: "מנוחה", unit: "שנ׳", field: "rest_seconds" as const },
                   ] as const).map(({ label, unit, field }) => (
-                    <div key={field} className="rounded-2xl p-3"
+                    <div key={field} className="rounded-2xl p-2.5"
                       style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09)" }}>
-                      <p className="text-[10px] text-center mb-2.5" style={{ color: "rgba(255,255,255,0.38)" }}>{label}</p>
-                      <div className="flex items-center justify-between gap-1">
+                      <p className="text-[10px] text-center mb-2" style={{ color: "rgba(255,255,255,0.38)" }}>{label}</p>
+                      <div className="flex items-center justify-between gap-0.5">
                         <button onClick={() => spin(ei, field, -1)}
-                          className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                          className="tap w-8 h-8 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
                           style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
-                        <div className="flex items-baseline justify-center gap-0.5 flex-1">
-                          <span className="text-[28px] font-extrabold leading-none nums">{ex[field] ?? 0}</span>
-                          {unit && <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>{unit}</span>}
+                        <div className="flex items-baseline justify-center gap-0.5 flex-1 min-w-0">
+                          <span className="text-[22px] font-extrabold leading-none nums">{ex[field] ?? 0}</span>
+                          {unit && <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.38)" }}>{unit}</span>}
                         </div>
                         <button onClick={() => spin(ei, field, 1)}
-                          className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                          className="tap w-8 h-8 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
                           style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
                       </div>
                     </div>
                   ))}
-
-                  {/* Reps tile — accepts "12" or "8-12" */}
-                  <div className="rounded-2xl p-3"
-                    style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09)" }}>
-                    <p className="text-[10px] text-center mb-2.5" style={{ color: "rgba(255,255,255,0.38)" }}>חזרות</p>
-                    <div className="flex items-center justify-between gap-1">
-                      <button onClick={() => spinReps(ei, -1)}
-                        className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
-                        style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
-                      <input
-                        type="text"
-                        value={ex.reps}
-                        onChange={(e) => updateField(ei, "reps", e.target.value)}
-                        className="flex-1 text-center text-[24px] font-extrabold leading-none nums bg-transparent outline-none min-w-0"
-                        style={{ color: "#FAF9F6" }}
-                        inputMode="text"
-                      />
-                      <button onClick={() => spinReps(ei, 1)}
-                        className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
-                        style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
-                    </div>
-                    <p className="text-[9px] text-center mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>12 או 8-12</p>
-                  </div>
                 </div>
+
+                {/* Reps tile — full width with קבוע / טווח toggle */}
+                {(() => {
+                  const rangeM = String(ex.reps).match(/^(\d+)-(\d+)$/);
+                  const isRange = !!rangeM;
+                  const lo = rangeM ? parseInt(rangeM[1]) : null;
+                  const hi = rangeM ? parseInt(rangeM[2]) : null;
+                  return (
+                    <div className="rounded-2xl p-3 mb-3"
+                      style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09)" }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.38)" }}>חזרות</p>
+                        <div className="flex rounded-full p-0.5" style={{ background: "rgba(255,255,255,0.08)" }}>
+                          <button
+                            onClick={() => { if (isRange) updateField(ei, "reps", String(hi ?? 12)); }}
+                            className="px-3 h-6 rounded-full text-[10.5px] font-semibold transition-colors"
+                            style={{ background: !isRange ? "#E11D2A" : "transparent", color: !isRange ? "#fff" : "rgba(255,255,255,0.45)" }}>
+                            קבוע
+                          </button>
+                          <button
+                            onClick={() => { if (!isRange) { const n = parseInt(String(ex.reps)) || 12; updateField(ei, "reps", `${Math.max(1,n-4)}-${n}`); } }}
+                            className="px-3 h-6 rounded-full text-[10.5px] font-semibold transition-colors"
+                            style={{ background: isRange ? "#E11D2A" : "transparent", color: isRange ? "#fff" : "rgba(255,255,255,0.45)" }}>
+                            טווח
+                          </button>
+                        </div>
+                      </div>
+                      {isRange ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => spinRepsLow(ei, -1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                          <div className="flex-1 text-center text-[26px] font-extrabold leading-none nums">{lo}</div>
+                          <button onClick={() => spinRepsLow(ei, 1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                          <span className="text-[16px] px-1" style={{ color: "rgba(255,255,255,0.25)" }}>—</span>
+                          <button onClick={() => spinRepsHigh(ei, -1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                          <div className="flex-1 text-center text-[26px] font-extrabold leading-none nums">{hi}</div>
+                          <button onClick={() => spinRepsHigh(ei, 1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-1">
+                          <button onClick={() => spinRepsFixed(ei, -1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                          <div className="flex-1 text-center text-[26px] font-extrabold leading-none nums">{ex.reps}</div>
+                          <button onClick={() => spinRepsFixed(ei, 1)}
+                            className="tap w-9 h-9 rounded-xl text-[20px] font-bold grid place-items-center flex-shrink-0"
+                            style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center gap-2 rounded-xl px-3 h-10 mb-2" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
                   <YTIcon className="w-4 h-4 flex-shrink-0" style={{ color: ex.youtube_url ? "#FF0000" : "rgba(255,255,255,0.20)" }} />
