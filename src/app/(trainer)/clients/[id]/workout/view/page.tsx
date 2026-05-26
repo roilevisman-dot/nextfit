@@ -206,8 +206,8 @@ export default function WorkoutViewPage() {
                   {[
                     { label: "סטים", value: ex.sets },
                     { label: "חזרות", value: ex.reps },
-                    { label: "מנוחה", value: `${ex.rest_seconds}שנ׳` },
-                    ...(ex.weight_kg ? [{ label: "משקל", value: `${ex.weight_kg}ק״ג` }] : []),
+                    { label: "מנוחה", value: `${ex.rest_seconds} שנ׳` },
+                    ...(ex.weight_kg ? [{ label: "משקל", value: `${ex.weight_kg} ק״ג` }] : []),
                   ].map((s, si) => (
                     <div key={si} className="rounded-xl px-3 py-1.5 flex flex-col items-center"
                       style={{ background: "rgba(255,255,255,0.06)" }}>
