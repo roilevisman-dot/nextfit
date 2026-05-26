@@ -51,6 +51,9 @@ export default function HomePage() {
   const [days, setDays] = useState<WorkoutDay[]>([]);
   const [todayDayIndex, setTodayDayIndex] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
+  const [daysPerWeek, setDaysPerWeek] = useState(3);
+  const [completedToday, setCompletedToday] = useState(false);
+  const [thisWeekCount, setThisWeekCount] = useState(0);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [doneMeals, setDoneMeals] = useState<boolean[]>([]);
   const [water, setWater] = useState(0);
@@ -105,9 +108,12 @@ export default function HomePage() {
       const mealPlanId = cmpRows?.[0]?.meal_plan_id ?? null;
 
       // Round 2: fetch dependent lists in parallel
-      const [wdaysRes, mpDataRes, mealsDataRes] = await Promise.all([
+      const [wdaysRes, workoutPlanRes, mpDataRes, mealsDataRes] = await Promise.all([
         planId
           ? supabase.from("workout_days").select("id, day_number, label").eq("plan_id", planId).order("day_number")
+          : Promise.resolve({ data: null }),
+        planId
+          ? supabase.from("workout_plans").select("days_per_week").eq("id", planId).single()
           : Promise.resolve({ data: null }),
         mealPlanId
           ? supabase.from("meal_plans").select("name, total_calories").eq("id", mealPlanId).single()
@@ -128,8 +134,8 @@ export default function HomePage() {
           ? supabase.from("plan_exercises").select("name, sets, reps, day_id").in("day_id", dayIds).order("order_index")
           : Promise.resolve({ data: null, count: null }),
         dayIds.length > 0
-          ? supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("client_id", cid).eq("completed", true).in("day_id", dayIds)
-          : Promise.resolve({ data: null, count: 0 }),
+          ? supabase.from("workout_sessions").select("session_date").eq("client_id", cid).eq("completed", true).in("day_id", dayIds).order("session_date", { ascending: false }).limit(60)
+          : Promise.resolve({ data: [] as { session_date: string }[] }),
         mealIds.length > 0
           ? supabase.from("meal_items").select("meal_id, food_name, calories, protein_g, carbs_g, fat_g").in("meal_id", mealIds).order("order_index")
           : Promise.resolve({ data: null }),
@@ -148,9 +154,25 @@ export default function HomePage() {
           exercises: allExs.filter((e) => (e as { day_id: string } & Exercise).day_id === day.id),
         }));
         setDays(loadedDays);
-        const cnt = sessionsRes.count ?? 0;
+
+        const allSessions = (sessionsRes.data ?? []) as { session_date: string }[];
+        const cnt = allSessions.length;
         setTotalSessions(cnt);
         setTodayDayIndex(cnt % loadedDays.length);
+
+        // Days per week from plan
+        const dpw = workoutPlanRes.data?.days_per_week ?? 3;
+        setDaysPerWeek(dpw);
+
+        // Did they work out today?
+        setCompletedToday(allSessions.some((s) => s.session_date === today));
+
+        // How many this week (Sunday = start of week in Israel)
+        const now = new Date(today);
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
+        setThisWeekCount(allSessions.filter((s) => s.session_date >= startOfWeekStr).length);
       }
 
       // Assemble meals
@@ -277,8 +299,54 @@ export default function HomePage() {
         </div>
 
         {/* Today workout hero */}
-        {todayDay ? (
-          <div className="px-5 rise" style={{ animationDelay: "120ms" }}>
+        {/* Workout hero — 3 states */}
+        <div className="px-5 rise" style={{ animationDelay: "120ms" }}>
+          {!todayDay ? (
+            // No plan
+            <div className="rounded-[28px] p-8 flex flex-col items-center gap-2 text-center"
+              style={{ background: "rgba(255,255,255,0.03)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
+              <DumbIcon className="w-8 h-8" style={{ color: "rgba(255,255,255,0.20)" }} />
+              <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>אין תוכנית אימון פעילה</p>
+            </div>
+          ) : completedToday ? (
+            // Already worked out today
+            <div className="relative rounded-[28px] text-white p-5 overflow-hidden tap"
+              style={{ background: "#0A0A0C", boxShadow: "0 1px 2px rgba(0,0,0,.06), 0 18px 40px rgba(0,0,0,.10)" }}
+              onClick={() => router.push("/workout")}>
+              <div aria-hidden className="absolute -top-24 -left-24 w-64 h-64 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(closest-side, rgba(16,185,129,0.40), rgba(16,185,129,0) 70%)" }} />
+              <div className="relative flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 text-[11px] tracking-wider uppercase" style={{ color: "rgba(16,185,129,0.80)" }}>
+                  <CheckIcon className="w-3.5 h-3.5" />
+                  הושלם היום
+                </div>
+                <div className="text-[11px] text-white/50 nums">{thisWeekCount}/{daysPerWeek} השבוע</div>
+              </div>
+              <div className="relative mt-3">
+                <h2 className="text-[26px] tracking-tight">{todayDay.label}</h2>
+                <p className="mt-1 text-[12.5px]" style={{ color: "rgba(16,185,129,0.70)" }}>כל הכבוד! האימון הושלם</p>
+              </div>
+            </div>
+          ) : thisWeekCount >= daysPerWeek ? (
+            // Rest day — completed all workouts for the week
+            <div className="relative rounded-[28px] text-white p-5 overflow-hidden"
+              style={{ background: "#0A0A0C", boxShadow: "0 1px 2px rgba(0,0,0,.06), 0 18px 40px rgba(0,0,0,.10)" }}>
+              <div aria-hidden className="absolute -top-24 -left-24 w-64 h-64 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(closest-side, rgba(100,100,120,0.30), transparent 70%)" }} />
+              <div className="relative flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 text-[11px] tracking-wider uppercase text-white/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                  יום מנוחה
+                </div>
+                <div className="text-[11px] text-white/50 nums">{thisWeekCount}/{daysPerWeek} השבוע ✓</div>
+              </div>
+              <div className="relative mt-3">
+                <h2 className="text-[26px] tracking-tight text-white/60">שאר ומנוחה</h2>
+                <p className="mt-1 text-[12.5px] text-white/35">השלמת את כל האימונים השבוע</p>
+              </div>
+            </div>
+          ) : (
+            // Normal — go work out
             <div
               className="relative rounded-[28px] text-white p-5 overflow-hidden tap"
               style={{ background: "#0A0A0C", boxShadow: "0 1px 2px rgba(0,0,0,.06), 0 18px 40px rgba(0,0,0,.10)" }}
@@ -288,20 +356,17 @@ export default function HomePage() {
                 style={{ background: "radial-gradient(closest-side, rgba(79,70,229,0.55), rgba(79,70,229,0) 70%)" }} />
               <div aria-hidden className="absolute inset-0 opacity-[0.06] pointer-events-none"
                 style={{ background: "radial-gradient(1200px 200px at 90% 0%, white, transparent 60%)" }} />
-
               <div className="relative flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 text-[11px] tracking-wider uppercase text-white/60">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#E11D2A" }} />
                   אימון היום
                 </div>
-                <div className="text-[11px] text-white/50 nums">יום {todayDay.day_number} / {days.length}</div>
+                <div className="text-[11px] text-white/50 nums">{thisWeekCount}/{daysPerWeek} השבוע</div>
               </div>
-
               <div className="relative mt-3">
                 <h2 className="text-[26px] tracking-tight">{todayDay.label}</h2>
                 <p className="mt-1 text-[12.5px] text-white/55">{todayDay.exercises.length} תרגילים</p>
               </div>
-
               <div className="relative mt-5 flex items-center gap-3">
                 <button
                   className="tap inline-flex items-center gap-2 bg-white rounded-full pl-4 pr-3 h-11 text-[14px] font-medium"
@@ -327,16 +392,8 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="px-5 rise" style={{ animationDelay: "120ms" }}>
-            <div className="rounded-[28px] p-8 flex flex-col items-center gap-2 text-center"
-              style={{ background: "rgba(255,255,255,0.03)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
-              <DumbIcon className="w-8 h-8" style={{ color: "rgba(255,255,255,0.20)" }} />
-              <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>אין תוכנית אימון פעילה</p>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Weight + Hydration */}
         <div className="px-5 mt-3 grid grid-cols-2 gap-3 rise" style={{ animationDelay: "200ms" }}>
