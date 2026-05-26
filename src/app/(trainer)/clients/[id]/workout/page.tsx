@@ -385,21 +385,28 @@ export default function ClientWorkoutPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="grid grid-cols-2 gap-2.5 mb-3">
                   {([
-                    { label: "משקל (ק״ג)", field: "weight_kg" as const, accent: true },
-                    { label: "סטים", field: "sets" as const, accent: false },
-                    { label: "חזרות", field: "reps" as const, accent: false },
-                    { label: "מנוחה (שנ׳)", field: "rest_seconds" as const, accent: false },
-                  ] as const).map(({ label, field, accent }) => (
-                    <div key={field} className="flex flex-col items-center gap-1.5 rounded-xl p-2.5"
-                      style={{ background: accent ? "rgba(225,29,42,0.07)" : "rgba(255,255,255,0.05)", boxShadow: accent ? "inset 0 0 0 1px rgba(225,29,42,0.18)" : "none" }}>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => spin(ei, field, -1)} className="tap w-7 h-7 rounded-lg text-[18px] font-bold grid place-items-center" style={{ background: "rgba(255,255,255,0.07)" }}>−</button>
-                        <span className="text-[16px] font-bold w-9 text-center">{ex[field] ?? 0}</span>
-                        <button onClick={() => spin(ei, field, 1)} className="tap w-7 h-7 rounded-lg text-[18px] font-bold grid place-items-center" style={{ background: "rgba(255,255,255,0.07)" }}>+</button>
+                    { label: "משקל", unit: "ק״ג", field: "weight_kg" as const },
+                    { label: "סטים",  unit: "",    field: "sets"         as const },
+                    { label: "חזרות", unit: "",    field: "reps"         as const },
+                    { label: "מנוחה", unit: "שנ׳", field: "rest_seconds" as const },
+                  ] as const).map(({ label, unit, field }) => (
+                    <div key={field} className="rounded-2xl p-3"
+                      style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09)" }}>
+                      <p className="text-[10px] text-center mb-2.5" style={{ color: "rgba(255,255,255,0.38)" }}>{label}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <button onClick={() => spin(ei, field, -1)}
+                          className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                          style={{ background: "rgba(255,255,255,0.08)" }}>−</button>
+                        <div className="flex items-baseline justify-center gap-0.5 flex-1">
+                          <span className="text-[28px] font-extrabold leading-none nums">{ex[field] ?? 0}</span>
+                          {unit && <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>{unit}</span>}
+                        </div>
+                        <button onClick={() => spin(ei, field, 1)}
+                          className="tap w-9 h-9 rounded-xl text-[22px] font-bold grid place-items-center flex-shrink-0"
+                          style={{ background: "rgba(255,255,255,0.08)" }}>+</button>
                       </div>
-                      <p className="text-[9.5px]" style={{ color: accent ? "rgba(225,29,42,0.80)" : "rgba(255,255,255,0.35)" }}>{label}</p>
                     </div>
                   ))}
                 </div>
