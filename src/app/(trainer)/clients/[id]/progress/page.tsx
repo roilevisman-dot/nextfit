@@ -182,8 +182,8 @@ export default function ClientProgressPage() {
   const latestWeight = filteredLogs.length > 0 ? filteredLogs[filteredLogs.length - 1].weight : null;
   const firstWeight = filteredLogs.length > 0 ? filteredLogs[0].weight : null;
   const delta = latestWeight !== null && firstWeight !== null ? (latestWeight - firstWeight) : null;
-  const totalChange = logs.length > 0 && client?.current_weight !== null
-    ? (logs[0]?.weight ?? 0) - (latestWeight ?? 0)
+  const totalChange = logs.length > 1
+    ? logs[logs.length - 1].weight - logs[0].weight
     : null;
 
   const addLog = async () => {
@@ -272,7 +272,7 @@ export default function ClientProgressPage() {
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
               { label: "יעד", value: client?.goal_weight ? `${client.goal_weight} ק״ג` : "—" },
-              { label: "שינוי כולל", value: totalChange !== null ? `${totalChange > 0 ? "-" : "+"}${Math.abs(totalChange).toFixed(1)} ק״ג` : "—" },
+              { label: "שינוי כולל", value: totalChange !== null ? `${totalChange < 0 ? "" : "+"}${totalChange.toFixed(1)} ק״ג` : "—" },
               { label: "מדידות", value: logs.length },
             ].map(({ label, value }, i) => (
               <div key={i} className="rounded-xl p-2.5 text-center" style={{ background: "rgba(255,255,255,0.05)" }}>
