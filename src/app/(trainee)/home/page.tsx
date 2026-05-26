@@ -31,7 +31,7 @@ function DumbIcon(p: React.SVGProps<SVGSVGElement>) {
 }
 
 type Exercise = { name: string; sets: number; reps: string | number };
-type WorkoutDay = { id: string; day_number: number; label: string; exercises: Exercise[] };
+type WorkoutDay = { id: string; day_number: number; label: string; scheduled_dow: number | null; exercises: Exercise[] };
 type MealItem = { food_name: string; calories: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null };
 type Meal = { id: string; name: string; time_window: string | null; items: MealItem[] };
 type MealPlan = { name: string; total_calories: number | null; meals: Meal[] };
@@ -110,7 +110,7 @@ export default function HomePage() {
       // Round 2: fetch dependent lists in parallel
       const [wdaysRes, workoutPlanRes, mpDataRes, mealsDataRes] = await Promise.all([
         planId
-          ? supabase.from("workout_days").select("id, day_number, label").eq("plan_id", planId).order("day_number")
+          ? supabase.from("workout_days").select("id, day_number, label, scheduled_dow").eq("plan_id", planId).order("day_number")
           : Promise.resolve({ data: null }),
         planId
           ? supabase.from("workout_plans").select("days_per_week").eq("id", planId).single()
@@ -151,6 +151,7 @@ export default function HomePage() {
           id: day.id,
           day_number: day.day_number,
           label: day.label,
+          scheduled_dow: (day as { scheduled_dow?: number | null }).scheduled_dow ?? null,
           exercises: allExs.filter((e) => (e as { day_id: string } & Exercise).day_id === day.id),
         }));
         setDays(loadedDays);
@@ -213,12 +214,17 @@ export default function HomePage() {
   };
 
   // ─── Derived ───
-  const todayDay = days[todayDayIndex] ?? null;
+  const now = new Date();
+  const todayDow = now.getDay(); // 0=Sun … 6=Sat
+  const hasSchedule = days.some((d) => d.scheduled_dow !== null);
+  const scheduledTodayDay = hasSchedule ? (days.find((d) => d.scheduled_dow === todayDow) ?? null) : null;
+  const isScheduledRestDay = hasSchedule && !scheduledTodayDay;
+  // If schedule is set, use the scheduled day for today; otherwise fall back to rotation
+  const todayDay = scheduledTodayDay ?? (days[todayDayIndex] ?? null);
   const nextDay = days.length > 1 ? days[(todayDayIndex + 1) % days.length] : null;
   const firstName = clientName.split(" ")[0] || "";
-  const hour = new Date().getHours();
+  const hour = now.getHours();
   const greeting = hour < 12 ? "בוקר טוב" : hour < 18 ? "צהריים טובים" : "ערב טוב";
-  const now = new Date();
   const dateStr = `${HEB_DAYS[now.getDay()]} · ${now.getDate()} ב${HEB_MONTHS[now.getMonth()]}`;
 
   const totalProtein = Math.round(mealPlan?.meals.reduce((s, m) => s + m.items.reduce((si, it) => si + (it.protein_g ?? 0), 0), 0) ?? 0);
@@ -291,7 +297,7 @@ export default function HomePage() {
             <span className="text-[36px] font-extrabold">{firstName || "שלום"}</span>
             <span style={{ color: "rgba(255,255,255,0.30)" }}>.</span>
           </h1>
-          {todayDay && (
+          {todayDay && !completedToday && !isScheduledRestDay && (
             <p className="text-[14px] mt-2 leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>
               אימון היום: {todayDay.label} — {todayDay.exercises.length} תרגילים
             </p>
@@ -327,8 +333,8 @@ export default function HomePage() {
                 <p className="mt-1 text-[12.5px]" style={{ color: "rgba(16,185,129,0.70)" }}>כל הכבוד! האימון הושלם</p>
               </div>
             </div>
-          ) : thisWeekCount >= daysPerWeek ? (
-            // Rest day — completed all workouts for the week
+          ) : isScheduledRestDay || thisWeekCount >= daysPerWeek ? (
+            // Rest day
             <div className="relative rounded-[28px] text-white p-5 overflow-hidden"
               style={{ background: "#0A0A0C", boxShadow: "0 1px 2px rgba(0,0,0,.06), 0 18px 40px rgba(0,0,0,.10)" }}>
               <div aria-hidden className="absolute -top-24 -left-24 w-64 h-64 rounded-full pointer-events-none"
@@ -338,11 +344,13 @@ export default function HomePage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
                   יום מנוחה
                 </div>
-                <div className="text-[11px] text-white/50 nums">{thisWeekCount}/{daysPerWeek} השבוע ✓</div>
+                <div className="text-[11px] text-white/50 nums">{thisWeekCount}/{daysPerWeek} השבוע</div>
               </div>
               <div className="relative mt-3">
                 <h2 className="text-[26px] tracking-tight text-white/60">שאר ומנוחה</h2>
-                <p className="mt-1 text-[12.5px] text-white/35">השלמת את כל האימונים השבוע</p>
+                <p className="mt-1 text-[12.5px] text-white/35">
+                  {thisWeekCount >= daysPerWeek ? "השלמת את כל האימונים השבוע" : "אין אימון מתוכנן היום"}
+                </p>
               </div>
             </div>
           ) : (

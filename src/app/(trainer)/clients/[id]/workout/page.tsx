@@ -19,8 +19,12 @@ type PlanExercise = {
 type WorkoutDay = {
   day_number: number;
   label: string;
+  scheduled_dow: number | null;
   exercises: PlanExercise[];
 };
+
+const DOW_SHORT = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+const DOW_FULL  = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
 const EXERCISE_LIBRARY = [
   { name: "לחיצת חזה", group: "חזה" },
@@ -134,7 +138,7 @@ export default function ClientWorkoutPage() {
 
           const { data: wdays, error: wdaysError } = await supabase
             .from("workout_days")
-            .select("id, day_number, label")
+            .select("id, day_number, label, scheduled_dow")
             .eq("plan_id", cp.plan_id)
             .order("day_number");
 
@@ -150,7 +154,7 @@ export default function ClientWorkoutPage() {
           const loadedDays: WorkoutDay[] = await Promise.all(
             Array.from({ length: n }, async (_, i) => {
               const dayRow = wdays?.find((d) => d.day_number === i + 1);
-              if (!dayRow) return { day_number: i + 1, label: DAY_LABELS[i], exercises: [] };
+              if (!dayRow) return { day_number: i + 1, label: DAY_LABELS[i], scheduled_dow: null, exercises: [] };
               const { data: exs } = await supabase
                 .from("plan_exercises")
                 .select("exercise_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
@@ -159,6 +163,7 @@ export default function ClientWorkoutPage() {
               return {
                 day_number: dayRow.day_number,
                 label: dayRow.label,
+                scheduled_dow: dayRow.scheduled_dow ?? null,
                 exercises: (exs ?? []).map((e) => ({
                   exercise_id: e.exercise_id ?? "",
                   name: e.name ?? "",
@@ -177,7 +182,7 @@ export default function ClientWorkoutPage() {
         }
       } else {
         // No existing plan — initialize empty days
-        setDays(Array.from({ length: 3 }, (_, i) => ({ day_number: i + 1, label: DAY_LABELS[i], exercises: [] })));
+        setDays(Array.from({ length: 3 }, (_, i) => ({ day_number: i + 1, label: DAY_LABELS[i], scheduled_dow: null, exercises: [] })));
       }
 
       setLoading(false);
@@ -191,7 +196,7 @@ export default function ClientWorkoutPage() {
     if (loading) return;
     if (!numDaysChangedByUser.current) { numDaysChangedByUser.current = true; return; }
     setDays((prev) =>
-      Array.from({ length: numDays }, (_, i) => prev[i] ?? { day_number: i + 1, label: DAY_LABELS[i], exercises: [] })
+      Array.from({ length: numDays }, (_, i) => prev[i] ?? { day_number: i + 1, label: DAY_LABELS[i], scheduled_dow: null, exercises: [] })
     );
     if (activeDay >= numDays) setActiveDay(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,6 +234,13 @@ export default function ClientWorkoutPage() {
       const n = Math.max(1, parseInt(cur || "12") + dir);
       updateField(ei, "reps", String(n));
     }
+  };
+
+  const pickDow = (dayIdx: number, dow: number | null) => {
+    setDays((prev) => prev.map((d, i) => i === dayIdx
+      ? { ...d, scheduled_dow: dow, label: dow !== null ? DOW_FULL[dow] : DAY_LABELS[i] }
+      : d
+    ));
   };
 
   const saveAll = async () => {
@@ -269,7 +281,7 @@ export default function ClientWorkoutPage() {
         if (day.exercises.length === 0) continue;
         const { data: dayRow, error: dayErr } = await supabase
           .from("workout_days")
-          .insert({ plan_id: currentPlanId, day_number: day.day_number, label: day.label })
+          .insert({ plan_id: currentPlanId, day_number: day.day_number, label: day.label, scheduled_dow: day.scheduled_dow ?? null })
           .select()
           .single();
         if (dayErr || !dayRow) throw new Error(dayErr?.message ?? "שגיאה ביצירת יום");
@@ -378,6 +390,26 @@ export default function ClientWorkoutPage() {
             </button>
           ))}
         </div>
+
+        {/* DOW scheduler for current day */}
+        {currentDay && (
+          <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)" }}>
+            <p className="text-[11px] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>יום בשבוע — {currentDay.label}</p>
+            <div className="flex gap-1.5">
+              {DOW_SHORT.map((name, dow) => (
+                <button key={dow} onClick={() => pickDow(activeDay, currentDay.scheduled_dow === dow ? null : dow)}
+                  className="tap flex-1 h-9 rounded-xl text-[12px] font-semibold"
+                  style={{
+                    background: currentDay.scheduled_dow === dow ? "#E11D2A" : "rgba(255,255,255,0.05)",
+                    color: currentDay.scheduled_dow === dow ? "#fff" : "rgba(255,255,255,0.45)",
+                    boxShadow: currentDay.scheduled_dow === dow ? "0 4px 14px rgba(225,29,42,0.35)" : "none",
+                  }}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Exercise cards */}
         {currentDay && (
