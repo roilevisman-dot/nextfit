@@ -62,6 +62,9 @@ function PlateIcon(props: React.SVGProps<SVGSVGElement>) {
 function ChartIcon(props: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-8" /><path d="M22 20H2" /></svg>;
 }
+function FlameIcon(props: React.SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.5 0 2.5-1.25 2.5-2.5 0-.61-.23-1.21-.64-1.67-.97-1.11-1.86-2.32-1.86-3.83a4 4 0 1 1 8 0c0 1.66-.5 3.16-1.5 4.5"/><path d="M12 22c-4.4 0-8-3.6-8-8 0-1.66.5-3.16 1.5-4.5"/></svg>;
+}
 function PenIcon(props: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
 }
@@ -188,6 +191,7 @@ export default function ClientDetailPage() {
 
   const sections = [
     { label: "תוכנית אימון", sub: "ניהול ימים ותרגילים", Icon: DumbbellIcon, href: `/clients/${clientId}/workout` },
+    { label: "מעקב אימונים", sub: "היסטוריית אימונים שהושלמו", Icon: FlameIcon, href: `/clients/${clientId}/sessions` },
     { label: "תפריט תזונה", sub: "ארוחות ומזונות", Icon: PlateIcon, href: `/clients/${clientId}/nutrition` },
     { label: "מעקב תזונה יומי", sub: "מה המתאמן אכל היום", Icon: EyeIcon, href: `/clients/${clientId}/nutrition/daily` },
     { label: "מעקב התקדמות", sub: "גרף משקל ומדדים", Icon: ChartIcon, href: `/clients/${clientId}/progress` },
