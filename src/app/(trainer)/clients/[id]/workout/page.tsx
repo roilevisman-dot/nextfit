@@ -151,33 +151,37 @@ export default function ClientWorkoutPage() {
             existingPlanHadDays.current = true;
           }
 
-          const loadedDays: WorkoutDay[] = await Promise.all(
-            Array.from({ length: n }, async (_, i) => {
-              const dayRow = wdays?.find((d) => d.day_number === i + 1);
-              if (!dayRow) return { day_number: i + 1, label: DAY_LABELS[i], scheduled_dow: null, exercises: [] };
-              const { data: exs } = await supabase
+          // Batch fetch all exercises in one query instead of N+1
+          const existingDayIds = (wdays ?? []).map((d) => d.id);
+          const { data: allExs } = existingDayIds.length > 0
+            ? await supabase
                 .from("plan_exercises")
-                .select("exercise_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
-                .eq("day_id", dayRow.id)
-                .order("order_index");
-              return {
-                day_number: dayRow.day_number,
-                label: dayRow.label,
-                scheduled_dow: dayRow.scheduled_dow ?? null,
-                exercises: (exs ?? []).map((e) => ({
-                  exercise_id: e.exercise_id ?? "",
-                  name: e.name ?? "",
-                  sets: e.sets ?? 3,
-                  reps: String(e.reps ?? "12"),
-                  rest_seconds: e.rest_seconds ?? 60,
-                  weight_kg: e.weight_kg ?? 0,
-                  youtube_url: e.youtube_url ?? "",
-                  notes: e.notes ?? "",
-                  order_index: e.order_index ?? 0,
-                })),
-              };
-            })
-          );
+                .select("day_id, exercise_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes, order_index")
+                .in("day_id", existingDayIds)
+                .order("order_index")
+            : { data: [] as { day_id: string; exercise_id: string | null; name: string; sets: number; reps: string | number; rest_seconds: number; weight_kg: number | null; youtube_url: string | null; notes: string | null; order_index: number }[] };
+
+          const loadedDays: WorkoutDay[] = Array.from({ length: n }, (_, i) => {
+            const dayRow = (wdays ?? []).find((d) => d.day_number === i + 1);
+            if (!dayRow) return { day_number: i + 1, label: DAY_LABELS[i], scheduled_dow: null, exercises: [] };
+            const exs = (allExs ?? []).filter((e) => e.day_id === dayRow.id);
+            return {
+              day_number: dayRow.day_number,
+              label: dayRow.label,
+              scheduled_dow: dayRow.scheduled_dow ?? null,
+              exercises: exs.map((e) => ({
+                exercise_id: e.exercise_id ?? "",
+                name: e.name ?? "",
+                sets: e.sets ?? 3,
+                reps: String(e.reps ?? "12"),
+                rest_seconds: e.rest_seconds ?? 60,
+                weight_kg: e.weight_kg ?? 0,
+                youtube_url: e.youtube_url ?? "",
+                notes: e.notes ?? "",
+                order_index: e.order_index ?? 0,
+              })),
+            };
+          });
           setDays(loadedDays);
         }
       } else {
