@@ -87,26 +87,27 @@ export default function WorkoutViewPage() {
         .eq("plan_id", cp.plan_id)
         .order("day_number");
 
-      const loadedDays: Day[] = await Promise.all(
-        (wdays ?? []).map(async (day) => {
-          const { data: exs } = await supabase
+      const dayIds = (wdays ?? []).map((d) => d.id);
+
+      // Batch fetch all exercises in one query
+      const { data: allExs } = dayIds.length > 0
+        ? await supabase
             .from("plan_exercises")
-            .select("name, sets, reps, rest_seconds, weight_kg, youtube_url, notes")
-            .eq("day_id", day.id)
-            .order("order_index");
-          return {
-            id: day.id,
-            day_number: day.day_number,
-            label: day.label,
-            exercises: exs ?? [],
-          };
-        })
-      );
+            .select("day_id, name, sets, reps, rest_seconds, weight_kg, youtube_url, notes")
+            .in("day_id", dayIds)
+            .order("order_index")
+        : { data: [] as (Exercise & { day_id: string })[] };
+
+      const loadedDays: Day[] = (wdays ?? []).map((day) => ({
+        id: day.id,
+        day_number: day.day_number,
+        label: day.label,
+        exercises: (allExs ?? []).filter((e) => (e as Exercise & { day_id: string }).day_id === day.id),
+      }));
 
       setDays(loadedDays);
 
       // Load last 14 days of sessions
-      const dayIds = (wdays ?? []).map((d) => d.id);
       if (dayIds.length > 0) {
         const since = new Date();
         since.setDate(since.getDate() - 14);
