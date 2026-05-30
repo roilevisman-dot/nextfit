@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NFMark } from "@/components/NFMark";
+import { pageCache } from "@/lib/page-cache";
 
 function BellIcon(p: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
@@ -79,6 +80,7 @@ export default function HomePage() {
     if (!cid) { router.push("/join"); return; }
 
     const today = new Date().toISOString().split("T")[0];
+    const CACHE_KEY = `home-${cid}-${today}`;
 
     const init = async () => {
       const since = new Date();
@@ -145,6 +147,10 @@ export default function HomePage() {
       ]);
 
       // Assemble workout days
+      let snapDays: WorkoutDay[] = [];
+      let snapTodayIdx = 0, snapCnt = 0, snapDpw = 3;
+      let snapCompletedToday = false, snapThisWeekCount = 0;
+
       if (wdays.length > 0) {
         const allExs = allExsRes.data ?? [];
         const loadedDays: WorkoutDay[] = wdays.map((day) => ({
@@ -158,25 +164,32 @@ export default function HomePage() {
 
         const allSessions = (sessionsRes.data ?? []) as { session_date: string }[];
         const cnt = allSessions.length;
+        const dpw = workoutPlanRes.data?.days_per_week ?? 3;
+        const now2 = new Date(today);
+        const startOfWeek = new Date(now2);
+        startOfWeek.setDate(now2.getDate() - now2.getDay());
+        const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
+        const completedTodayVal = allSessions.some((s) => s.session_date === today);
+        const thisWeekCountVal = allSessions.filter((s) => s.session_date >= startOfWeekStr).length;
+
         setTotalSessions(cnt);
         setTodayDayIndex(cnt % loadedDays.length);
-
-        // Days per week from plan
-        const dpw = workoutPlanRes.data?.days_per_week ?? 3;
         setDaysPerWeek(dpw);
+        setCompletedToday(completedTodayVal);
+        setThisWeekCount(thisWeekCountVal);
 
-        // Did they work out today?
-        setCompletedToday(allSessions.some((s) => s.session_date === today));
-
-        // How many this week (Sunday = start of week in Israel)
-        const now = new Date(today);
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
-        setThisWeekCount(allSessions.filter((s) => s.session_date >= startOfWeekStr).length);
+        snapDays = loadedDays;
+        snapTodayIdx = cnt % loadedDays.length;
+        snapCnt = cnt;
+        snapDpw = dpw;
+        snapCompletedToday = completedTodayVal;
+        snapThisWeekCount = thisWeekCountVal;
       }
 
       // Assemble meals
+      let snapMealPlan: MealPlan | null = null;
+      let snapDoneMeals: boolean[] = [];
+
       if (mpDataRes.data && mealsData.length > 0) {
         const allItems = allItemsRes.data ?? [];
         const logs = logsRes.data ?? [];
@@ -186,13 +199,57 @@ export default function HomePage() {
           time_window: meal.time_window,
           items: allItems.filter((it) => (it as MealItem & { meal_id: string }).meal_id === meal.id),
         }));
-        setMealPlan({ name: mpDataRes.data.name, total_calories: mpDataRes.data.total_calories, meals: loadedMeals });
-        setDoneMeals(loadedMeals.map((m) => !!logs.find((l) => l.meal_id === m.id)));
+        snapMealPlan = { name: mpDataRes.data.name, total_calories: mpDataRes.data.total_calories, meals: loadedMeals };
+        snapDoneMeals = loadedMeals.map((m) => !!logs.find((l) => l.meal_id === m.id));
+        setMealPlan(snapMealPlan);
+        setDoneMeals(snapDoneMeals);
       }
+
+      // Save snapshot for instant re-render on next visit
+      pageCache.set(CACHE_KEY, {
+        clientName: cd?.name ?? "",
+        currentWeight: cd?.current_weight ?? null,
+        weightLogs: wlogs ?? [],
+        days: snapDays,
+        todayDayIndex: snapTodayIdx,
+        totalSessions: snapCnt,
+        daysPerWeek: snapDpw,
+        completedToday: snapCompletedToday,
+        thisWeekCount: snapThisWeekCount,
+        mealPlan: snapMealPlan,
+        doneMeals: snapDoneMeals,
+        waterGoal: cd?.water_goal_liters ?? DEFAULT_WATER_GOAL,
+      });
 
       setLoading(false);
     };
-    init();
+
+    // Restore from cache for instant render — fetch in background to refresh
+    const cached = pageCache.get<{
+      clientName: string; currentWeight: number | null; weightLogs: WeightLog[];
+      days: WorkoutDay[]; todayDayIndex: number; totalSessions: number;
+      daysPerWeek: number; completedToday: boolean; thisWeekCount: number;
+      mealPlan: MealPlan | null; doneMeals: boolean[]; waterGoal: number;
+    }>(CACHE_KEY);
+
+    if (cached) {
+      setClientName(cached.clientName);
+      setCurrentWeight(cached.currentWeight);
+      setWeightLogs(cached.weightLogs);
+      setDays(cached.days);
+      setTodayDayIndex(cached.todayDayIndex);
+      setTotalSessions(cached.totalSessions);
+      setDaysPerWeek(cached.daysPerWeek);
+      setCompletedToday(cached.completedToday);
+      setThisWeekCount(cached.thisWeekCount);
+      setMealPlan(cached.mealPlan);
+      setDoneMeals(cached.doneMeals);
+      setWaterGoal(cached.waterGoal);
+      setLoading(false);
+      init(); // silent background refresh
+    } else {
+      init();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

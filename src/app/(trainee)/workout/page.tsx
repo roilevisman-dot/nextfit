@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NFMark } from "@/components/NFMark";
+import { pageCache } from "@/lib/page-cache";
 
 type PlanExercise = {
   name: string;
@@ -88,6 +89,16 @@ export default function WorkoutPage() {
     if (!cid) { router.push("/join"); return; }
     setClientId(cid);
 
+    type CacheShape = { plan: Plan; planStartDate: string | null; completedDays: string[] };
+    const cacheKey = `workout-${cid}-${TODAY}`;
+    const cached = pageCache.get<CacheShape>(cacheKey);
+    if (cached) {
+      setPlan(cached.plan);
+      setPlanStartDate(cached.planStartDate);
+      setCompletedDays(new Set(cached.completedDays));
+      setLoading(false);
+    }
+
     const { data: cpRows } = await supabase
       .from("client_plans")
       .select("plan_id")
@@ -119,10 +130,13 @@ export default function WorkoutPage() {
       exercises: (allExData ?? []).filter((e) => (e as PlanExercise & { day_id: string }).day_id === day.id),
     }));
 
-    setCompletedDays(new Set(sessions?.map((s) => s.day_id) ?? []));
+    const completedDayIds = sessions?.map((s) => s.day_id) ?? [];
+    setCompletedDays(new Set(completedDayIds));
 
+    const builtPlan: Plan = { ...planData, duration_weeks: planData.duration_weeks ?? null, days: daysWithExercises };
+    pageCache.set(cacheKey, { plan: builtPlan, planStartDate: planData.created_at ?? null, completedDays: completedDayIds });
     if (planData.created_at) setPlanStartDate(planData.created_at);
-    setPlan({ ...planData, duration_weeks: planData.duration_weeks ?? null, days: daysWithExercises });
+    setPlan(builtPlan);
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
@@ -139,6 +153,7 @@ export default function WorkoutPage() {
       completed: true,
       completed_at: new Date().toISOString(),
     });
+    pageCache.invalidate(`workout-${clientId}-${TODAY}`);
     setCompletedDays((prev) => new Set([...prev, currentDay.id]));
     setMarkingDone(false);
   };
